@@ -9,7 +9,8 @@ const PORT = 3000;
 // --------------------
 // Database
 // --------------------
-const db = new Database('entries.db');
+const db = new Database('/var/data/entries.db');
+
 
 // Create tables if they don't exist
 db.prepare(`
