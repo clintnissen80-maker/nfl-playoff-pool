@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin – Player Scores</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    h2 {
+      margin-top: 30px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 5px;
+    }
+    .player {
+      background: #fff;
+      padding: 10px;
+      margin-bottom: 8px;
+      border-radius: 5px;
+      display: grid;
+      grid-template-columns: 1.5fr repeat(5, 1fr);
+      gap: 5px;
+      align-items: center;
+    }
+    .player-name {
+      font-weight: bold;
+      font-size: 14px;
+    }
+    input {
+      width: 100%;
+      padding: 5px;
+      text-align: center;
+    }
+    .total {
+      font-weight: bold;
+      text-align: center;
+    }
+    button {
+      margin-top: 25px;
+      width: 100%;
+      padding: 14px;
+      font-size: 18px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    /* HEADER ROW */
+    .player.header {
+      background: transparent;
+      font-weight: bold;
+      border-bottom: 2px solid #999;
+    }
+    .player.header div {
+      text-align: center;
+    }
+    .player.header div:first-child {
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Admin – Player Scores</h1>
+
+<div id="scores">Loading players…</div>
+
+<button id="saveBtn">Save Scores</button>
+
+<script>
+  const container = document.getElementById('scores');
+  const saveBtn = document.getElementById('saveBtn');
+
+  let players = [];
+
+  fetch('/api/admin/player-scores')
+    .then(res => res.json())
+    .then(data => {
+      players = data;
+      render();
+    });
+
+  function render() {
+    container.innerHTML = '';
+
+    // 🔹 HEADER ROW (must be inside render)
+    const header = document.createElement('div');
+    header.className = 'player header';
+    header.innerHTML = `
+      <div>Player</div>
+      <div>Wildcard</div>
+      <div>Divisional</div>
+      <div>Conference</div>
+      <div>Super Bowl</div>
+      <div>Total</div>
+    `;
+    container.appendChild(header);
+
+    const grouped = {};
+    players.forEach(p => {
+      if (!grouped[p.position]) grouped[p.position] = [];
+      grouped[p.position].push(p);
+    });
+
+    ['QB','RB','WR','TE','K'].forEach(pos => {
+      if (!grouped[pos]) return;
+
+      const h = document.createElement('h2');
+      h.textContent = pos;
+      container.appendChild(h);
+
+      grouped[pos].forEach(p => {
+        const row = document.createElement('div');
+        row.className = 'player';
+        row.dataset.id = p.player_id;
+
+        row.innerHTML = `
+          <div class="player-name">${p.player_name} (${p.team})</div>
+          <input type="number" value="${p.wildcard}" data-field="wildcard">
+          <input type="number" value="${p.divisional}" data-field="divisional">
+          <input type="number" value="${p.conference}" data-field="conference">
+          <input type="number" value="${p.superbowl}" data-field="superbowl">
+          <div class="total">0</div>
+        `;
+
+        row.querySelectorAll('input').forEach(inp => {
+          inp.addEventListener('input', () => updateTotal(row));
+        });
+
+        updateTotal(row);
+        container.appendChild(row);
+      });
+    });
+  }
+
+  function updateTotal(row) {
+    const total =
+      Number(row.querySelector('[data-field="wildcard"]').value || 0) +
+      Number(row.querySelector('[data-field="divisional"]').value || 0) +
+      Number(row.querySelector('[data-field="conference"]').value || 0) +
+      Number(row.querySelector('[data-field="superbowl"]').value || 0);
+
+    row.querySelector('.total').textContent = total;
+  }
+
+  saveBtn.addEventListener('click', async () => {
+    const rows = document.querySelectorAll('.player:not(.header)');
+
+    for (const row of rows) {
+      const payload = {
+        player_id: row.dataset.id,
+        wildcard: Number(row.querySelector('[data-field="wildcard"]').value || 0),
+        divisional: Number(row.querySelector('[data-field="divisional"]').value || 0),
+        conference: Number(row.querySelector('[data-field="conference"]').value || 0),
+        superbowl: Number(row.querySelector('[data-field="superbowl"]').value || 0)
+      };
+
+      await fetch('/api/admin/player-scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+
+    alert('Scores saved successfully');
+  });
+</script>
+
+</body>
+</html>

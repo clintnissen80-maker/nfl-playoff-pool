@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NFL Playoff Pool</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    h1 {
+      text-align: center;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      font-size: 16px;
+    }
+    button {
+      margin-top: 25px;
+      width: 100%;
+      padding: 12px;
+      font-size: 18px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      opacity: 0.5;
+    }
+    button.enabled {
+      opacity: 1;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>NFL Playoff Pool</h1>
+
+    <label for="entryName">Entry Name</label>
+    <input id="entryName" type="text" placeholder="My Entry 1" />
+
+    <label for="email">Email</label>
+    <input id="email" type="email" placeholder="you@email.com" />
+
+    <button id="continueBtn" disabled onclick="goNext()">Continue</button>
+
+  </div>
+
+  <script>
+    const entryNameInput = document.getElementById('entryName');
+    const emailInput = document.getElementById('email');
+    const continueBtn = document.getElementById('continueBtn');
+
+    function checkInputs() {
+      if (entryNameInput.value.trim() && emailInput.value.trim()) {
+        continueBtn.disabled = false;
+        continueBtn.classList.add('enabled');
+      } else {
+        continueBtn.disabled = true;
+        continueBtn.classList.remove('enabled');
+      }
+    }
+function goNext() {
+  sessionStorage.setItem('entryName', entryNameInput.value.trim());
+  sessionStorage.setItem('email', emailInput.value.trim());
+  window.location.href = "select.html";
+}
+
+
+    entryNameInput.addEventListener('input', checkInputs);
+    emailInput.addEventListener('input', checkInputs);
+  </script>
+</body>
+</html>

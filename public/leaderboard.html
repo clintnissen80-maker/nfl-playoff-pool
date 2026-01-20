@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Playoff Pool Leaderboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .row {
+      background: #ffffff;
+      padding: 12px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      display: grid;
+      grid-template-columns: 60px 1fr 120px;
+      align-items: center;
+      font-size: 16px;
+    }
+    .row.header {
+      font-weight: bold;
+      background: transparent;
+    }
+    .rank {
+      font-weight: bold;
+      text-align: center;
+    }
+    .leader {
+      border: 3px solid #28a745;
+      background: #f6fff8;
+    }
+    .score {
+      text-align: right;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Playoff Pool Leaderboard</h1>
+
+<div id="board">Loading…</div>
+
+<script>
+  const board = document.getElementById('board');
+
+  fetch('/api/admin/entries')
+    .then(res => res.json())
+    .then(entries => {
+      board.innerHTML = '';
+
+      if (!entries.length) {
+        board.textContent = 'No entries yet.';
+        return;
+      }
+
+      const header = document.createElement('div');
+      header.className = 'row header';
+      header.innerHTML = `
+        <div class="rank">Rank</div>
+        <div>Entry</div>
+        <div class="score">Score</div>
+      `;
+      board.appendChild(header);
+
+      let lastScore = null;
+      let displayRank = 0;
+
+      entries.forEach((entry, index) => {
+        if (
+  lastScore === null ||
+  Number(entry.total_score).toFixed(2) < Number(lastScore).toFixed(2)
+) {
+
+          displayRank = index + 1;
+        }
+        lastScore = Number(entry.total_score).toFixed(2);
+
+
+        const row = document.createElement('div');
+        row.className = 'row';
+        if (displayRank === 1) row.classList.add('leader');
+
+        row.innerHTML = `
+          <div class="rank">#${displayRank}</div>
+          <div>${entry.entry_name}</div>
+          <div class="score">${Number(entry.total_score).toFixed(2)}</div>
+
+        `;
+
+        board.appendChild(row);
+      });
+    })
+    .catch(() => {
+      board.textContent = 'Failed to load leaderboard.';
+    });
+</script>
+
+</body>
+</html>

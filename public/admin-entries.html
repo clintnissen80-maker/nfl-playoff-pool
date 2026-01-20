@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin – Entries</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    .count {
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    .entry {
+      background: #ffffff;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+    }
+    .meta {
+      color: #555;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    .player {
+      font-size: 14px;
+      padding-left: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Admin – Entries</h1>
+<div class="count" id="count">Loading…</div>
+
+<div id="entries">Loading…</div>
+
+<script>
+  const container = document.getElementById('entries');
+  const countDiv = document.getElementById('count');
+
+  fetch('/api/admin/entries')
+    .then(res => res.json())
+    .then(entries => {
+      container.innerHTML = '';
+
+      countDiv.textContent = `Total Entries: ${entries.length}`;
+
+      if (!entries.length) {
+        container.textContent = 'No entries found.';
+        return;
+      }
+
+      entries.forEach(entry => {
+        const div = document.createElement('div');
+        div.className = 'entry';
+
+        div.innerHTML = `
+          <h3>${entry.entry_name}</h3>
+          <div class="meta">
+            ${entry.email} • ${entry.created_at}
+          </div>
+        `;
+
+        entry.players.forEach(p => {
+          const pl = document.createElement('div');
+          pl.className = 'player';
+          pl.textContent = `${p.position} – ${p.player_name} (${p.team})`;
+          div.appendChild(pl);
+        });
+
+        container.appendChild(div);
+      });
+    })
+    .catch(() => {
+      container.textContent = 'Failed to load entries.';
+      countDiv.textContent = '';
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin – Entries</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .entry {
+      background: #ffffff;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 6px;
+    }
+    .entry.leader {
+      border: 3px solid #28a745;
+      background: #f6fff8;
+    }
+    .meta {
+      color: #555;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    .total {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.5fr repeat(5, 1fr);
+      gap: 6px;
+      font-size: 14px;
+    }
+    .grid.header {
+      font-weight: bold;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 4px;
+      margin-bottom: 4px;
+    }
+    .cell {
+      text-align: center;
+    }
+    .cell.left {
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Admin – All Entries</h1>
+
+<div id="entries">Loading…</div>
+
+<script>
+  const container = document.getElementById('entries');
+
+  fetch('/api/admin/entries')
+    .then(res => res.json())
+    .then(entries => {
+      container.innerHTML = '';
+      if (!entries.length) {
+        container.textContent = 'No entries found.';
+        return;
+      }
+
+      const topScore = entries[0].total_score;
+
+      let currentRank = 0;
+let lastScore = null;
+let displayRank = 0;
+
+entries.forEach((entry, index) => {
+  if (lastScore === null || entry.total_score < lastScore) {
+    displayRank = index + 1;
+  }
+
+  lastScore = entry.total_score;
+
+        const div = document.createElement('div');
+        div.className = 'entry';
+        if (entry.total_score === topScore) div.classList.add('leader');
+
+        div.innerHTML = `
+          <h3>#${displayRank} — ${entry.entry_name}</h3>
+          <div class="meta">${entry.email} • ${entry.created_at}</div>
+          <div class="total">Total Score: ${Number(entry.total_score).toFixed(2)}</div>
+
+
+          <div class="grid header">
+            <div class="cell left">Player</div>
+            <div class="cell">WC</div>
+            <div class="cell">DIV</div>
+            <div class="cell">CONF</div>
+            <div class="cell">SB</div>
+            <div class="cell">Total</div>
+          </div>
+        `;
+
+        entry.players.forEach(p => {
+          const row = document.createElement('div');
+          row.className = 'grid';
+          row.innerHTML = `
+            <div class="cell left">${p.position} – ${p.player_name} (${p.team})</div>
+            <div class="cell">${p.wildcard}</div>
+            <div class="cell">${p.divisional}</div>
+            <div class="cell">${p.conference}</div>
+            <div class="cell">${p.superbowl}</div>
+            <div class="cell"><strong>${Number(p.player_total).toFixed(2)}</strong>
+</div>
+          `;
+          div.appendChild(row);
+        });
+
+        container.appendChild(div);
+      });
+    })
+    .catch(() => {
+      container.textContent = 'Failed to load entries.';
+    });
+</script>
+
+</body>
+</html>

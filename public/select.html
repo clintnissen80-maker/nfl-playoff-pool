@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Select Players</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 10px;
+      background: #f5f5f5;
+    }
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 15px;
+      border-radius: 8px;
+    }
+    h2 {
+      margin-top: 25px;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 5px;
+    }
+    .counts {
+      font-weight: bold;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .player {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .player.selected {
+      background: #cce5ff;
+      border-color: #007bff;
+    }
+    .player.disabled {
+      background: #eee;
+      color: #999;
+      cursor: not-allowed;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 12px;
+      font-size: 18px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      opacity: 0.5;
+    }
+    button.enabled {
+      opacity: 1;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="counts" id="counts">
+    QB: 0/3 | RB: 0/3 | WR: 0/3 | TE: 0/2 | K: 0/3
+  </div>
+
+  <div id="players"></div>
+
+  <button id="reviewBtn" disabled>Review Entry</button>
+</div>
+
+<script>
+  const playersDiv = document.getElementById('players');
+
+  const reviewBtn = document.getElementById('reviewBtn');
+
+
+  const limits = { QB:3, RB:3, WR:3, TE:2, K:3 };
+  const selected = { QB:0, RB:0, WR:0, TE:0, K:0 };
+  const selectedTeams = new Set();
+
+  function updateCounts() {
+  document.getElementById('counts').textContent =
+    `QB: ${selected.QB}/3 | RB: ${selected.RB}/3 | WR: ${selected.WR}/3 | TE: ${selected.TE}/2 | K: ${selected.K}/3`;
+
+  const total =
+    selected.QB +
+    selected.RB +
+    selected.WR +
+    selected.TE +
+    selected.K;
+
+  const valid =
+    selected.QB === 3 &&
+    selected.RB === 3 &&
+    selected.WR === 3 &&
+    selected.TE === 2 &&
+    selected.K === 3 &&
+    total === 14;
+
+  const btn = document.getElementById('reviewBtn');
+  if (valid) {
+    btn.disabled = false;
+    btn.classList.add('enabled');
+  } else {
+    btn.disabled = true;
+    btn.classList.remove('enabled');
+  }
+}
+
+
+  function recalcDisabledStates() {
+    document.querySelectorAll('.player').forEach(p => {
+      const team = p.dataset.team;
+      const pos  = p.dataset.pos;
+
+      // team rule
+      if (selectedTeams.has(team) && !p.classList.contains('selected')) {
+        p.classList.add('disabled');
+        return;
+      }
+
+      // position rule
+      if (selected[pos] >= limits[pos] && !p.classList.contains('selected')) {
+        p.classList.add('disabled');
+        return;
+      }
+
+      p.classList.remove('disabled');
+    });
+  }
+
+  fetch('/api/players')
+    .then(res => res.json())
+    .then(players => {
+      const grouped = {};
+      players.forEach(p => {
+        if (!grouped[p.Position]) grouped[p.Position] = [];
+        grouped[p.Position].push(p);
+      });
+
+      ['QB','RB','WR','TE','K'].forEach(pos => {
+        if (!grouped[pos]) return;
+
+        const h = document.createElement('h2');
+        h.textContent = pos;
+        playersDiv.appendChild(h);
+
+        grouped[pos].forEach(player => {
+          const div = document.createElement('div');
+          div.className = 'player';
+          div.textContent = `${player.PlayerName} (${player.TeamID})`;
+          div.dataset.team = player.TeamID;
+          div.dataset.pos  = player.Position;
+
+          div.addEventListener('click', () => {
+            if (div.classList.contains('disabled')) return;
+
+            const team = div.dataset.team;
+            const pos  = div.dataset.pos;
+
+            if (div.classList.contains('selected')) {
+              div.classList.remove('selected');
+              selected[pos]--;
+              selectedTeams.delete(team);
+            } else {
+              if (selected[pos] >= limits[pos]) return;
+              if (selectedTeams.has(team)) return;
+
+              div.classList.add('selected');
+              selected[pos]++;
+              selectedTeams.add(team);
+            }
+
+            updateCounts();
+            recalcDisabledStates();
+          });
+
+          playersDiv.appendChild(div);
+
+        });
+      });
+    });
+
+reviewBtn.addEventListener('click', () => {
+  const selectedPlayers = [];
+
+  document.querySelectorAll('.player.selected').forEach(p => {
+    selectedPlayers.push({
+      name: p.textContent.replace(/\s*\(.*?\)/, ''),
+      team: p.dataset.team,
+      position: p.dataset.pos
+    });
+  });
+
+  sessionStorage.setItem('entryPlayers', JSON.stringify(selectedPlayers));
+
+  window.location.href = 'review.html';
+});
+</script>
+
+</body>
+</html>

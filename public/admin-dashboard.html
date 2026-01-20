@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 30px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .menu {
+      max-width: 400px;
+      margin: 0 auto;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      margin-bottom: 15px;
+      font-size: 18px;
+      text-align: center;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn.green {
+      background: #28a745;
+    }
+    .btn.gray {
+      background: #6c757d;
+    }
+    .btn:hover {
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Admin Dashboard</h1>
+
+<div class="menu">
+  <a class="btn green" href="/admin-scores.html">
+    Enter Player Scores
+  </a>
+
+  <a class="btn" href="/admin-entries.html">
+  View All Entries
+  </a>
+
+  <a class="btn" href="/admin.html">
+    Admin Leaderboard
+  </a>
+
+  <a class="btn" href="/leaderboard.html" target="_blank">
+    Public Leaderboard
+  </a>
+
+  <a class="btn gray" href="/api/admin/export">
+    Export Entries (CSV)
+  </a>
+</div>
+
+</body>
+</html>

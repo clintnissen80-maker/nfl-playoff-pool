@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entry Saved</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 12px;
+      font-size: 18px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>✅ Entry Saved</h1>
+  <p>Your entry has been successfully submitted.</p>
+
+  <button id="addAnother">Add Another Entry</button>
+  <button id="payNow">Proceed to Payment</button>
+</div>
+
+<script>
+  document.getElementById('addAnother').addEventListener('click', () => {
+    window.location.href = 'select.html';
+  });
+
+  document.getElementById('payNow').addEventListener('click', () => {
+    window.location.href = 'payment.html';
+  });
+</script>
+
+</body>
+</html>
