@@ -55,7 +55,22 @@
 <body>
 
 <!-- 🔴 Reset for New Season Button -->
-<div style="position: absolute; top: 15px; right: 15px;">
+<div style="position: absolute; top: 15px; right: 15px; display: flex; gap: 10px;">
+  <button
+    onclick="window.location.href='/admin-playoff-setup.html'"
+    style="
+      background-color: #1565c0;
+      color: white;
+      border: none;
+      padding: 10px 14px;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 4px;
+    "
+  >
+    🏈 Setup Playoff Teams
+  </button>
+
   <button
     onclick="resetSeason()"
     style="
@@ -71,6 +86,7 @@
     🔴 Reset for New Season
   </button>
 </div>
+
 
 <h1>Admin Dashboard</h1>
 

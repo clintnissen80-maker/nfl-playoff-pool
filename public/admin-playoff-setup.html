@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (!localStorage.getItem("adminToken")) {
+      window.location.href = "/admin-login.html";
+    }
+  </script>
+
+  <meta charset="UTF-8" />
+  <title>Admin – Playoff Setup</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 30px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .section {
+      background: white;
+      padding: 20px;
+      margin-top: 20px;
+      border-radius: 6px;
+    }
+    .teams {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    button {
+      margin-top: 20px;
+      padding: 12px;
+      font-size: 16px;
+      background: #1565c0;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>Playoff Team Selection</h1>
+
+<div class="section">
+  <h3>Select exactly 14 playoff teams</h3>
+  <div class="teams" id="teamList"></div>
+  <button onclick="saveTeams()">Save Playoff Teams</button>
+</div>
+
+<script>
+  const ALL_TEAMS = [
+    "ARI","ATL","BAL","BUF","CAR","CHI","CIN","CLE",
+    "DAL","DEN","DET","GB","HOU","IND","JAC","KC",
+    "LAC","LAR","LV","MIA","MIN","NE","NO","NYG",
+    "NYJ","PHI","PIT","SEA","SF","TB","TEN","WAS"
+  ];
+
+  const teamList = document.getElementById("teamList");
+
+  ALL_TEAMS.forEach(team => {
+    const label = document.createElement("label");
+    label.innerHTML = `
+      <input type="checkbox" value="${team}">
+      ${team}
+    `;
+    teamList.appendChild(label);
+  });
+
+  function saveTeams() {
+    const selected = Array.from(
+      document.querySelectorAll("input[type=checkbox]:checked")
+    ).map(cb => cb.value);
+
+    if (selected.length !== 14) {
+      alert("You must select exactly 14 teams.");
+      return;
+    }
+
+    alert("Teams selected:\n\n" + selected.join(", "));
+    // Backend save comes next
+  }
+</script>
+
+</body>
+</html>
