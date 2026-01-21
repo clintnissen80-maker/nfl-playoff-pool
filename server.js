@@ -50,6 +50,20 @@ db.prepare(`
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.post("/admin-login", (req, res) => {
+  const { password } = req.body;
+
+  if (password !== process.env.MMBC2026!) {
+    return res.status(401).json({ error: "Invalid password" });
+  }
+
+  const token = Buffer.from(
+    `${password}:${Date.now()}`
+  ).toString("base64");
+
+  res.json({ token });
+});
+
 // --------------------
 // Health check
 // --------------------
