@@ -1,9 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- 🔐 Admin guard -->
+  <script>
+    if (!localStorage.getItem("adminToken")) {
+      window.location.href = "/admin-login.html";
+    }
+  </script>
+
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin – Entries</title>
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -30,7 +38,6 @@
       font-weight: bold;
       margin-bottom: 10px;
     }
-
     .grid {
       display: grid;
       grid-template-columns: 1.5fr repeat(5, 1fr);
@@ -51,6 +58,7 @@
     }
   </style>
 </head>
+
 <body>
 
 <h1>Admin – All Entries</h1>
@@ -59,11 +67,20 @@
 
 <script>
   const container = document.getElementById('entries');
+  const token = localStorage.getItem("adminToken");
 
-  fetch('/api/admin/entries')
-    .then(res => res.json())
+  fetch('/api/admin/entries', {
+    headers: {
+      "Authorization": token
+    }
+  })
+    .then(res => {
+      if (!res.ok) throw new Error("Unauthorized");
+      return res.json();
+    })
     .then(entries => {
       container.innerHTML = '';
+
       if (!entries.length) {
         container.textContent = 'No entries found.';
         return;
@@ -71,26 +88,25 @@
 
       const topScore = entries[0].total_score;
 
-      let currentRank = 0;
-let lastScore = null;
-let displayRank = 0;
+      let lastScore = null;
+      let displayRank = 0;
 
-entries.forEach((entry, index) => {
-  if (lastScore === null || entry.total_score < lastScore) {
-    displayRank = index + 1;
-  }
-
-  lastScore = entry.total_score;
+      entries.forEach((entry, index) => {
+        if (lastScore === null || entry.total_score < lastScore) {
+          displayRank = index + 1;
+        }
+        lastScore = entry.total_score;
 
         const div = document.createElement('div');
         div.className = 'entry';
-        if (entry.total_score === topScore) div.classList.add('leader');
+        if (entry.total_score === topScore) {
+          div.classList.add('leader');
+        }
 
         div.innerHTML = `
           <h3>#${displayRank} — ${entry.entry_name}</h3>
           <div class="meta">${entry.email} • ${entry.created_at}</div>
           <div class="total">Total Score: ${Number(entry.total_score).toFixed(2)}</div>
-
 
           <div class="grid header">
             <div class="cell left">Player</div>
@@ -111,8 +127,7 @@ entries.forEach((entry, index) => {
             <div class="cell">${p.divisional}</div>
             <div class="cell">${p.conference}</div>
             <div class="cell">${p.superbowl}</div>
-            <div class="cell"><strong>${Number(p.player_total).toFixed(2)}</strong>
-</div>
+            <div class="cell"><strong>${Number(p.player_total).toFixed(2)}</strong></div>
           `;
           div.appendChild(row);
         });
@@ -121,7 +136,9 @@ entries.forEach((entry, index) => {
       });
     })
     .catch(() => {
-      container.textContent = 'Failed to load entries.';
+      alert("Admin session expired. Please log in again.");
+      localStorage.removeItem("adminToken");
+      window.location.href = "/admin-login.html";
     });
 </script>
 

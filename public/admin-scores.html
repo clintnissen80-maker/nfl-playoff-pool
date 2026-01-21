@@ -1,9 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- 🔐 Admin guard -->
+  <script>
+    if (!localStorage.getItem("adminToken")) {
+      window.location.href = "/admin-login.html";
+    }
+  </script>
+
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin – Player Scores</title>
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -67,6 +75,7 @@
     }
   </style>
 </head>
+
 <body>
 
 <h1>Admin – Player Scores</h1>
@@ -78,20 +87,34 @@
 <script>
   const container = document.getElementById('scores');
   const saveBtn = document.getElementById('saveBtn');
+  const token = localStorage.getItem("adminToken");
 
   let players = [];
 
-  fetch('/api/admin/player-scores')
-    .then(res => res.json())
+  // 🔐 Load players WITH auth
+  fetch('/api/admin/player-scores', {
+    headers: {
+      "Authorization": token
+    }
+  })
+    .then(res => {
+      if (!res.ok) throw new Error("Unauthorized");
+      return res.json();
+    })
     .then(data => {
       players = data;
       render();
+    })
+    .catch(() => {
+      alert("Admin session expired. Please log in again.");
+      localStorage.removeItem("adminToken");
+      window.location.href = "/admin-login.html";
     });
 
   function render() {
     container.innerHTML = '';
 
-    // 🔹 HEADER ROW (must be inside render)
+    // HEADER ROW
     const header = document.createElement('div');
     header.className = 'player header';
     header.innerHTML = `
@@ -151,6 +174,7 @@
     row.querySelector('.total').textContent = total;
   }
 
+  // 🔐 Save scores WITH auth
   saveBtn.addEventListener('click', async () => {
     const rows = document.querySelectorAll('.player:not(.header)');
 
@@ -163,11 +187,21 @@
         superbowl: Number(row.querySelector('[data-field="superbowl"]').value || 0)
       };
 
-      await fetch('/api/admin/player-scores', {
+      const res = await fetch('/api/admin/player-scores', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token
+        },
         body: JSON.stringify(payload)
       });
+
+      if (!res.ok) {
+        alert("Failed to save scores. Admin session expired.");
+        localStorage.removeItem("adminToken");
+        window.location.href = "/admin-login.html";
+        return;
+      }
     }
 
     alert('Scores saved successfully');
