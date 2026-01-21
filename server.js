@@ -53,7 +53,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.post("/admin-login", (req, res) => {
   const { password } = req.body;
 
-  if (password !== process.env.MMBC2026!) {
+  if (password !== process.env.ADMIN_PASSWORD) {
     return res.status(401).json({ error: "Invalid password" });
   }
 
