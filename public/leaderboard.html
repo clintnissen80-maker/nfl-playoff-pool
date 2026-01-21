@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Playoff Pool Leaderboard</title>
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -50,7 +51,8 @@
 <script>
   const board = document.getElementById('board');
 
-  fetch('/api/admin/entries')
+  // 🌐 PUBLIC leaderboard endpoint (no auth)
+  fetch('/api/leaderboard')
     .then(res => res.json())
     .then(entries => {
       board.innerHTML = '';
@@ -73,15 +75,12 @@
       let displayRank = 0;
 
       entries.forEach((entry, index) => {
-        if (
-  lastScore === null ||
-  Number(entry.total_score).toFixed(2) < Number(lastScore).toFixed(2)
-) {
+        const score = Number(entry.total_score).toFixed(2);
 
+        if (lastScore === null || score < lastScore) {
           displayRank = index + 1;
         }
-        lastScore = Number(entry.total_score).toFixed(2);
-
+        lastScore = score;
 
         const row = document.createElement('div');
         row.className = 'row';
@@ -90,8 +89,7 @@
         row.innerHTML = `
           <div class="rank">#${displayRank}</div>
           <div>${entry.entry_name}</div>
-          <div class="score">${Number(entry.total_score).toFixed(2)}</div>
-
+          <div class="score">${score}</div>
         `;
 
         board.appendChild(row);

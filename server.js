@@ -183,6 +183,30 @@ app.get('/api/entries/count', (req, res) => {
 });
 
 // --------------------
+// 🌐 PUBLIC LEADERBOARD (NO EMAILS, NO AUTH)
+// --------------------
+app.get('/api/leaderboard', (req, res) => {
+  const entries = db.prepare(`
+    SELECT
+      e.id,
+      e.entry_name,
+      SUM(
+        COALESCE(s.wildcard, 0) +
+        COALESCE(s.divisional, 0) +
+        COALESCE(s.conference, 0) +
+        COALESCE(s.superbowl, 0)
+      ) AS total_score
+    FROM entries e
+    JOIN entry_players p ON e.id = p.entry_id
+    LEFT JOIN player_scores s ON p.player_id = s.player_id
+    GROUP BY e.id
+    ORDER BY total_score DESC, e.created_at ASC
+  `).all();
+
+  res.json(entries);
+});
+
+// --------------------
 // Admin: get all entries + leaderboard
 // --------------------
 app.get('/api/admin/entries', requireAdmin, (req, res) => {
