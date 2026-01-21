@@ -135,10 +135,16 @@ app.post('/api/entries', (req, res) => {
     });
   }
 
+  // ✅ AUTO-SUFFIX ENTRY NAME PER EMAIL
+  let finalEntryName = entryName;
+  if (existingCount > 0) {
+    finalEntryName = `${entryName}-${existingCount + 1}`;
+  }
+
   const insertEntry = db.prepare(
     'INSERT INTO entries (entry_name, email) VALUES (?, ?)'
   );
-  const result = insertEntry.run(entryName, email);
+  const result = insertEntry.run(finalEntryName, email);
   const entryId = result.lastInsertRowid;
 
   const insertPlayer = db.prepare(
@@ -183,7 +189,7 @@ app.get('/api/entries/count', (req, res) => {
 });
 
 // --------------------
-// 🌐 PUBLIC LEADERBOARD (NO EMAILS, NO AUTH)
+// 🌐 PUBLIC LEADERBOARD (NO EMAILS)
 // --------------------
 app.get('/api/leaderboard', (req, res) => {
   const entries = db.prepare(`
