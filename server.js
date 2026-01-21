@@ -11,7 +11,6 @@ const PORT = 3000;
 // --------------------
 const db = new Database('/var/data/entries.db');
 
-
 // Create tables if they don't exist
 db.prepare(`
   CREATE TABLE IF NOT EXISTS entries (
@@ -50,6 +49,30 @@ db.prepare(`
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// --------------------
+// Admin auth middleware
+// --------------------
+function requireAdmin(req, res, next) {
+  const token = req.headers.authorization;
+
+  if (!token) {
+    return res.status(403).json({ error: "Admin only" });
+  }
+
+  try {
+    const decoded = Buffer.from(token, "base64").toString();
+    if (!decoded.includes(process.env.ADMIN_PASSWORD)) {
+      throw new Error("Invalid token");
+    }
+    next();
+  } catch {
+    return res.status(403).json({ error: "Invalid token" });
+  }
+}
+
+// --------------------
+// Admin login
+// --------------------
 app.post("/admin-login", (req, res) => {
   const { password } = req.body;
 
@@ -72,7 +95,7 @@ app.get('/health', (req, res) => {
 });
 
 // --------------------
-// Load players from CSV
+// Load players from CSV (PUBLIC)
 // --------------------
 app.get('/api/players', (req, res) => {
   const csv = fs.readFileSync('players.csv', 'utf8');
@@ -92,7 +115,7 @@ app.get('/api/players', (req, res) => {
 });
 
 // --------------------
-// Save entry (max 4 per email)
+// Save entry (PUBLIC)
 // --------------------
 app.post('/api/entries', (req, res) => {
   const { entryName, email, players } = req.body;
@@ -142,7 +165,7 @@ app.post('/api/entries', (req, res) => {
 });
 
 // --------------------
-// Get entry count for payment
+// Entry count (PUBLIC)
 // --------------------
 app.get('/api/entries/count', (req, res) => {
   const email = req.query.email;
@@ -160,9 +183,9 @@ app.get('/api/entries/count', (req, res) => {
 });
 
 // --------------------
-// Admin: get all entries + totals + players
+// Admin: get all entries + leaderboard
 // --------------------
-app.get('/api/admin/entries', (req, res) => {
+app.get('/api/admin/entries', requireAdmin, (req, res) => {
   const entries = db.prepare(`
     SELECT
       e.id,
@@ -183,24 +206,23 @@ app.get('/api/admin/entries', (req, res) => {
   `).all();
 
   const playersStmt = db.prepare(`
-  SELECT
-    p.position,
-    p.player_name,
-    p.team,
-    COALESCE(s.wildcard, 0)   AS wildcard,
-    COALESCE(s.divisional, 0) AS divisional,
-    COALESCE(s.conference, 0) AS conference,
-    COALESCE(s.superbowl, 0)  AS superbowl,
-    COALESCE(s.wildcard, 0) +
-    COALESCE(s.divisional, 0) +
-    COALESCE(s.conference, 0) +
-    COALESCE(s.superbowl, 0) AS player_total
-  FROM entry_players p
-  LEFT JOIN player_scores s ON p.player_id = s.player_id
-  WHERE p.entry_id = ?
-  ORDER BY p.position
-`);
-
+    SELECT
+      p.position,
+      p.player_name,
+      p.team,
+      COALESCE(s.wildcard, 0)   AS wildcard,
+      COALESCE(s.divisional, 0) AS divisional,
+      COALESCE(s.conference, 0) AS conference,
+      COALESCE(s.superbowl, 0)  AS superbowl,
+      COALESCE(s.wildcard, 0) +
+      COALESCE(s.divisional, 0) +
+      COALESCE(s.conference, 0) +
+      COALESCE(s.superbowl, 0) AS player_total
+    FROM entry_players p
+    LEFT JOIN player_scores s ON p.player_id = s.player_id
+    WHERE p.entry_id = ?
+    ORDER BY p.position
+  `);
 
   const result = entries.map(e => ({
     ...e,
@@ -211,9 +233,9 @@ app.get('/api/admin/entries', (req, res) => {
 });
 
 // --------------------
-// Admin: export entries to CSV
+// Admin: export entries CSV
 // --------------------
-app.get('/api/admin/export', (req, res) => {
+app.get('/api/admin/export', requireAdmin, (req, res) => {
   const rows = db.prepare(`
     SELECT
       e.entry_name,
@@ -237,10 +259,11 @@ app.get('/api/admin/export', (req, res) => {
   res.header('Content-Disposition', 'attachment; filename="entries.csv"');
   res.send(csv);
 });
+
 // --------------------
-// Admin: get ALL players with scores (from players.csv)
+// Admin: get player scores
 // --------------------
-app.get('/api/admin/player-scores', (req, res) => {
+app.get('/api/admin/player-scores', requireAdmin, (req, res) => {
   const csv = fs.readFileSync('players.csv', 'utf8');
   const lines = csv.trim().split('\n');
 
@@ -277,11 +300,10 @@ app.get('/api/admin/player-scores', (req, res) => {
   res.json(result);
 });
 
-
 // --------------------
 // Admin: save player scores
 // --------------------
-app.post('/api/admin/player-scores', (req, res) => {
+app.post('/api/admin/player-scores', requireAdmin, (req, res) => {
   const { player_id, wildcard, divisional, conference, superbowl } = req.body;
 
   if (!player_id) {
