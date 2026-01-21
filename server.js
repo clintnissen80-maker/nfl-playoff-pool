@@ -98,7 +98,7 @@ app.get('/health', (req, res) => {
 // Load players from CSV (PUBLIC)
 // --------------------
 app.get('/api/players', (req, res) => {
-  const csv = fs.readFileSync('players.csv', 'utf8');
+  const csv = fs.readFileSync(path.join(__dirname, 'players.csv'), 'utf8');
   const lines = csv.trim().split('\n');
 
   const headers = lines[0].split(',');
@@ -264,7 +264,7 @@ app.get('/api/admin/export', requireAdmin, (req, res) => {
 // Admin: get player scores
 // --------------------
 app.get('/api/admin/player-scores', requireAdmin, (req, res) => {
-  const csv = fs.readFileSync('players.csv', 'utf8');
+  const csv = fs.readFileSync(path.join(__dirname, 'players.csv'), 'utf8');
   const lines = csv.trim().split('\n');
 
   const headers = lines[0].split(',');
