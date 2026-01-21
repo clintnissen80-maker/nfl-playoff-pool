@@ -77,7 +77,7 @@
     teamList.appendChild(label);
   });
 
-  function saveTeams() {
+  async function saveTeams() {
     const selected = Array.from(
       document.querySelectorAll("input[type=checkbox]:checked")
     ).map(cb => cb.value);
@@ -87,8 +87,23 @@
       return;
     }
 
-    alert("Teams selected:\n\n" + selected.join(", "));
-    // Backend save comes next
+    const token = localStorage.getItem("adminToken");
+
+    const res = await fetch('/api/admin/playoff-teams', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token
+      },
+      body: JSON.stringify({ teams: selected })
+    });
+
+    if (!res.ok) {
+      alert("Failed to save playoff teams.");
+      return;
+    }
+
+    alert("Playoff teams saved successfully.");
   }
 </script>
 

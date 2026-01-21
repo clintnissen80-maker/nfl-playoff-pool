@@ -115,6 +115,27 @@ app.get('/api/players', (req, res) => {
 });
 
 // --------------------
+// Admin: save playoff teams
+// --------------------
+app.post('/api/admin/playoff-teams', requireAdmin, (req, res) => {
+  const { teams } = req.body;
+
+  if (!Array.isArray(teams) || teams.length !== 14) {
+    return res.status(400).json({ error: 'Exactly 14 teams required' });
+  }
+
+  const filePath = '/var/data/playoff-teams.json';
+
+  fs.writeFileSync(
+    filePath,
+    JSON.stringify({ teams }, null, 2),
+    'utf8'
+  );
+
+  res.json({ success: true });
+});
+
+// --------------------
 // Save entry (PUBLIC)
 // --------------------
 app.post('/api/entries', (req, res) => {
