@@ -331,6 +331,22 @@ app.post('/api/admin/player-scores', requireAdmin, (req, res) => {
 });
 
 // --------------------
+// Admin: reset season (DANGEROUS)
+// --------------------
+app.post('/api/admin/reset-season', requireAdmin, (req, res) => {
+  try {
+    db.prepare('DELETE FROM entry_players').run();
+    db.prepare('DELETE FROM entries').run();
+    db.prepare('DELETE FROM player_scores').run();
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to reset season' });
+  }
+});
+
+// --------------------
 // Start server
 // --------------------
 app.listen(PORT, () => {
