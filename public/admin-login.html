@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Login</title>
+</head>
+<body>
+  <h2>Admin Login</h2>
+
+  <input
+    type="password"
+    id="password"
+    placeholder="Admin password"
+  />
+
+  <button onclick="login()">Login</button>
+
+  <p id="error" style="color:red;"></p>
+
+  <script>
+    async function login() {
+      const password = document.getElementById("password").value;
+
+      const res = await fetch("/admin-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password })
+      });
+
+      if (!res.ok) {
+        document.getElementById("error").innerText = "Invalid password";
+        return;
+      }
+
+      const data = await res.json();
+      localStorage.setItem("adminToken", data.token);
+
+      window.location.href = "/admin-dashboard.html";
+    }
+  </script>
+</body>
+</html>
