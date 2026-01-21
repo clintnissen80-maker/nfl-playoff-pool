@@ -115,6 +115,20 @@ app.get('/api/players', (req, res) => {
 });
 
 // --------------------
+// Admin: get saved playoff teams
+// --------------------
+app.get('/api/admin/playoff-teams', requireAdmin, (req, res) => {
+  const filePath = '/var/data/playoff-teams.json';
+
+  if (!fs.existsSync(filePath)) {
+    return res.json({ teams: [] });
+  }
+
+  const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  res.json(data);
+});
+
+// --------------------
 // Admin: save playoff teams
 // --------------------
 app.post('/api/admin/playoff-teams', requireAdmin, (req, res) => {

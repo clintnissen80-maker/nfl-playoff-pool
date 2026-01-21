@@ -68,6 +68,7 @@
 
   const teamList = document.getElementById("teamList");
 
+  // 1️⃣ Render all team checkboxes FIRST
   ALL_TEAMS.forEach(team => {
     const label = document.createElement("label");
     label.innerHTML = `
@@ -77,6 +78,30 @@
     teamList.appendChild(label);
   });
 
+  // 2️⃣ THEN load saved playoff teams and auto-check
+  (async function loadSavedTeams() {
+    const token = localStorage.getItem("adminToken");
+
+    const res = await fetch('/api/admin/playoff-teams', {
+      headers: {
+        'Authorization': token
+      }
+    });
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const savedTeams = data.teams || [];
+
+    savedTeams.forEach(team => {
+      const checkbox = document.querySelector(
+        `input[type="checkbox"][value="${team}"]`
+      );
+      if (checkbox) checkbox.checked = true;
+    });
+  })();
+
+  // 3️⃣ Save handler
   async function saveTeams() {
     const selected = Array.from(
       document.querySelectorAll("input[type=checkbox]:checked")
