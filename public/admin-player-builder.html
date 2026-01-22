@@ -16,19 +16,16 @@
       background: #f5f5f5;
       padding: 30px;
     }
-
     h1 {
       text-align: center;
       margin-bottom: 30px;
     }
-
     .section {
       background: white;
       padding: 20px;
       margin-bottom: 25px;
       border-radius: 6px;
     }
-
     .row {
       display: grid;
       grid-template-columns: 120px 1fr auto;
@@ -36,21 +33,17 @@
       align-items: center;
       margin-bottom: 10px;
     }
-
     .team {
       font-weight: bold;
     }
-
     select, input {
       padding: 6px;
       font-size: 14px;
     }
-
     button {
       padding: 6px 10px;
       cursor: pointer;
     }
-
     .add-btn {
       background: #1565c0;
       color: white;
@@ -58,14 +51,12 @@
       border-radius: 4px;
       margin-top: 10px;
     }
-
     .remove-btn {
       background: #c62828;
       color: white;
       border: none;
       border-radius: 4px;
     }
-
     .save-btn {
       background: #2e7d32;
       color: white;
@@ -77,20 +68,13 @@
       cursor: pointer;
       margin-top: 20px;
     }
-
     .status {
       margin-top: 15px;
       font-weight: bold;
       text-align: center;
     }
-
-    .error {
-      color: #c62828;
-    }
-
-    .success {
-      color: #2e7d32;
-    }
+    .error { color: #c62828; }
+    .success { color: #2e7d32; }
   </style>
 </head>
 
@@ -98,169 +82,132 @@
 
 <h1>Player Pool Builder</h1>
 
-<!-- ================= QB ================= -->
+<!-- QB -->
 <div class="section">
   <h2>Quarterbacks (QB)</h2>
-  <div id="qbContainer">Loading…</div>
+  <div id="qbContainer"></div>
 </div>
 
-<!-- ================= RB ================= -->
+<!-- RB -->
 <div class="section">
   <h2>Running Backs (RB)</h2>
   <div id="rbContainer"></div>
   <button class="add-btn" onclick="addRB()">+ Add RB</button>
 </div>
 
-<!-- ================= WR ================= -->
+<!-- WR -->
 <div class="section">
   <h2>Wide Receivers (WR)</h2>
   <div id="wrContainer"></div>
   <button class="add-btn" onclick="addWR()">+ Add WR</button>
 </div>
 
-<button class="save-btn" onclick="savePool()">
-  Save Player Pool
-</button>
+<!-- TE -->
+<div class="section">
+  <h2>Tight Ends (TE)</h2>
+  <div id="teContainer"></div>
+  <button class="add-btn" onclick="addTE()">+ Add TE</button>
+</div>
 
+<button class="save-btn" onclick="savePool()">Save Player Pool</button>
 <div id="status" class="status"></div>
 
 <script>
+  const token = localStorage.getItem("adminToken");
+  const statusDiv = document.getElementById("status");
+
   const qbContainer = document.getElementById("qbContainer");
   const rbContainer = document.getElementById("rbContainer");
   const wrContainer = document.getElementById("wrContainer");
-  const statusDiv = document.getElementById("status");
-  const token = localStorage.getItem("adminToken");
+  const teContainer = document.getElementById("teContainer");
 
   let teams = [];
   let pool = {};
 
-  // ---------------- LOAD ----------------
   async function loadData() {
     const res = await fetch('/api/admin/player-pool', {
-      headers: { 'Authorization': token }
+      headers: { Authorization: token }
     });
-
-    if (!res.ok) {
-      qbContainer.innerHTML = 'Failed to load data.';
-      return;
-    }
-
     const data = await res.json();
+
     teams = data.teams;
     pool = data.pool || {};
 
     renderQB();
-    renderRB();
-    renderWR();
+    renderGroup('RB', rbContainer, addRB);
+    renderGroup('WR', wrContainer, addWR);
+    renderGroup('TE', teContainer, addTE);
   }
 
-  // ---------------- QB ----------------
+  // ---------- RENDER ----------
   function renderQB() {
     qbContainer.innerHTML = '';
-
     teams.forEach(team => {
-      const qbName =
-        pool.QB && pool.QB[team] && pool.QB[team][0]
-          ? pool.QB[team][0].name
-          : '';
-
-      const row = document.createElement('div');
-      row.className = 'row';
-
-      row.innerHTML = `
-        <div class="team">${team}</div>
-        <input type="text" placeholder="QB last name" value="${qbName}" data-qb-team="${team}">
+      const name = pool.QB?.[team]?.[0]?.name || '';
+      qbContainer.innerHTML += `
+        <div class="row">
+          <div class="team">${team}</div>
+          <input data-qb-team="${team}" value="${name}" placeholder="QB last name">
+        </div>
       `;
-
-      qbContainer.appendChild(row);
     });
   }
 
-  // ---------------- RB ----------------
-  function renderRB() {
-    rbContainer.innerHTML = '';
-    if (!pool.RB) pool.RB = {};
-
-    Object.keys(pool.RB).forEach(team => {
-      pool.RB[team].forEach(p => createRBRow(team, p.name));
+  function renderGroup(pos, container) {
+    container.innerHTML = '';
+    if (!pool[pos]) pool[pos] = {};
+    Object.keys(pool[pos]).forEach(team => {
+      pool[pos][team].forEach(p => createRow(container, pos, team, p.name));
     });
   }
 
-  function createRBRow(team = '', name = '') {
+  function createRow(container, pos, team = '', name = '') {
     const row = document.createElement('div');
     row.className = 'row';
-
     row.innerHTML = `
       <select>${teams.map(t => `<option ${t===team?'selected':''}>${t}</option>`).join('')}</select>
-      <input type="text" placeholder="RB last name" value="${name}">
+      <input value="${name}" placeholder="${pos} last name">
       <button class="remove-btn" onclick="this.parentElement.remove()">✖</button>
     `;
-
-    rbContainer.appendChild(row);
+    container.appendChild(row);
   }
 
-  function addRB() { createRBRow(); }
+  function addRB() { createRow(rbContainer, 'RB'); }
+  function addWR() { createRow(wrContainer, 'WR'); }
+  function addTE() { createRow(teContainer, 'TE'); }
 
-  // ---------------- WR ----------------
-  function renderWR() {
-    wrContainer.innerHTML = '';
-    if (!pool.WR) pool.WR = {};
-
-    Object.keys(pool.WR).forEach(team => {
-      pool.WR[team].forEach(p => createWRRow(team, p.name));
-    });
-  }
-
-  function createWRRow(team = '', name = '') {
-    const row = document.createElement('div');
-    row.className = 'row';
-
-    row.innerHTML = `
-      <select>${teams.map(t => `<option ${t===team?'selected':''}>${t}</option>`).join('')}</select>
-      <input type="text" placeholder="WR last name" value="${name}">
-      <button class="remove-btn" onclick="this.parentElement.remove()">✖</button>
-    `;
-
-    wrContainer.appendChild(row);
-  }
-
-  function addWR() { createWRRow(); }
-
-  // ---------------- SAVE ----------------
+  // ---------- SAVE ----------
   async function savePool() {
     statusDiv.textContent = '';
     statusDiv.className = 'status';
 
-    const newPool = { QB: {}, RB: {}, WR: {} };
+    const newPool = { QB:{}, RB:{}, WR:{}, TE:{} };
 
     // QB
-    teams.forEach(team => {
-      const name = document.querySelector(`input[data-qb-team="${team}"]`).value.trim();
-      if (!name) {
-        statusDiv.textContent = `Missing QB for team ${team}`;
-        statusDiv.classList.add('error');
-        return;
-      }
+    for (const team of teams) {
+      const name = document.querySelector(`[data-qb-team="${team}"]`).value.trim();
+      if (!name) return showError(`Missing QB for ${team}`);
       newPool.QB[team] = [{ name }];
-    });
+    }
 
-    // RB
-    rbContainer.querySelectorAll('.row').forEach(row => {
-      const team = row.querySelector('select').value;
-      const name = row.querySelector('input').value.trim();
-      if (!name) return;
-      if (!newPool.RB[team]) newPool.RB[team] = [];
-      newPool.RB[team].push({ name });
-    });
+    // RB / WR / TE
+    for (const [pos, container] of [['RB',rbContainer],['WR',wrContainer],['TE',teContainer]]) {
+      const seen = {};
+      container.querySelectorAll('.row').forEach(row => {
+        const team = row.querySelector('select').value;
+        const name = row.querySelector('input').value.trim();
+        if (!name) return;
 
-    // WR
-    wrContainer.querySelectorAll('.row').forEach(row => {
-      const team = row.querySelector('select').value;
-      const name = row.querySelector('input').value.trim();
-      if (!name) return;
-      if (!newPool.WR[team]) newPool.WR[team] = [];
-      newPool.WR[team].push({ name });
-    });
+        const key = `${team}|${name.toLowerCase()}`;
+        if (seen[key]) {
+          throw showError(`Duplicate ${pos} "${name}" for team ${team}`);
+        }
+        seen[key] = true;
+
+        if (!newPool[pos][team]) newPool[pos][team] = [];
+        newPool[pos][team].push({ name });
+      });
+    }
 
     const res = await fetch('/api/admin/player-pool', {
       method: 'POST',
@@ -271,15 +218,19 @@
       body: JSON.stringify({ pool: newPool })
     });
 
-    const data = await res.json();
     if (!res.ok) {
-      statusDiv.textContent = data.error || 'Failed to save';
-      statusDiv.classList.add('error');
-      return;
+      const err = await res.json();
+      return showError(err.error || 'Save failed');
     }
 
-    statusDiv.textContent = 'QB + RB + WR saved successfully';
+    statusDiv.textContent = 'Player pool saved successfully';
     statusDiv.classList.add('success');
+  }
+
+  function showError(msg) {
+    statusDiv.textContent = msg;
+    statusDiv.classList.add('error');
+    throw new Error(msg);
   }
 
   loadData();
