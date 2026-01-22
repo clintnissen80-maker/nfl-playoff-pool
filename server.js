@@ -7,6 +7,22 @@ const app = express();
 const PORT = 3000;
 
 // --------------------
+// Season config files
+// --------------------
+const PLAYOFF_TEAMS_FILE = '/var/data/playoff-teams.json';
+const PLAYER_POOL_FILE = '/var/data/player-pool.json';
+
+function getPlayoffTeams() {
+  if (!fs.existsSync(PLAYOFF_TEAMS_FILE)) return [];
+  return JSON.parse(fs.readFileSync(PLAYOFF_TEAMS_FILE, 'utf8')).teams || [];
+}
+
+function getPlayerPool() {
+  if (!fs.existsSync(PLAYER_POOL_FILE)) return {};
+  return JSON.parse(fs.readFileSync(PLAYER_POOL_FILE, 'utf8'));
+}
+
+// --------------------
 // Database
 // --------------------
 const db = new Database('/var/data/entries.db');
@@ -118,14 +134,10 @@ app.get('/api/players', (req, res) => {
 // Admin: get saved playoff teams
 // --------------------
 app.get('/api/admin/playoff-teams', requireAdmin, (req, res) => {
-  const filePath = '/var/data/playoff-teams.json';
-
-  if (!fs.existsSync(filePath)) {
+  if (!fs.existsSync(PLAYOFF_TEAMS_FILE)) {
     return res.json({ teams: [] });
   }
-
-  const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  res.json(data);
+  res.json(JSON.parse(fs.readFileSync(PLAYOFF_TEAMS_FILE, 'utf8')));
 });
 
 // --------------------
@@ -138,16 +150,80 @@ app.post('/api/admin/playoff-teams', requireAdmin, (req, res) => {
     return res.status(400).json({ error: 'Exactly 14 teams required' });
   }
 
-  const filePath = '/var/data/playoff-teams.json';
-
   fs.writeFileSync(
-    filePath,
+    PLAYOFF_TEAMS_FILE,
     JSON.stringify({ teams }, null, 2),
     'utf8'
   );
 
   res.json({ success: true });
 });
+
+// ====================
+// PHASE 3A – PLAYER POOL BACKEND
+// ====================
+
+// --------------------
+// Admin: get player pool
+// --------------------
+app.get('/api/admin/player-pool', requireAdmin, (req, res) => {
+  const playoffTeams = getPlayoffTeams();
+  if (playoffTeams.length !== 14) {
+    return res.status(400).json({ error: 'Playoff teams not set' });
+  }
+
+  res.json({
+    teams: playoffTeams,
+    pool: getPlayerPool()
+  });
+});
+
+// --------------------
+// Admin: save player pool
+// --------------------
+app.post('/api/admin/player-pool', requireAdmin, (req, res) => {
+  const { pool } = req.body;
+  const playoffTeams = getPlayoffTeams();
+
+  if (!pool || typeof pool !== 'object') {
+    return res.status(400).json({ error: 'Invalid pool format' });
+  }
+
+  // Validate QB: exactly 1 per team
+  if (pool.QB) {
+    for (const team of playoffTeams) {
+      const qbs = pool.QB[team] || [];
+      if (qbs.length !== 1) {
+        return res.status(400).json({
+          error: `Team ${team} must have exactly 1 QB`
+        });
+      }
+    }
+  }
+
+  // Validate all teams are playoff teams
+  for (const position of Object.keys(pool)) {
+    for (const team of Object.keys(pool[position])) {
+      if (!playoffTeams.includes(team)) {
+        return res.status(400).json({
+          error: `Invalid team ${team} in ${position}`
+        });
+      }
+    }
+  }
+
+  fs.writeFileSync(
+    PLAYER_POOL_FILE,
+    JSON.stringify(pool, null, 2),
+    'utf8'
+  );
+
+  res.json({ success: true });
+});
+
+// ====================
+// EXISTING ENTRY + ADMIN ROUTES
+// ====================
 
 // --------------------
 // Save entry (PUBLIC)
@@ -170,7 +246,6 @@ app.post('/api/entries', (req, res) => {
     });
   }
 
-  // ✅ AUTO-SUFFIX ENTRY NAME PER EMAIL
   let finalEntryName = entryName;
   if (existingCount > 0) {
     finalEntryName = `${entryName}-${existingCount + 1}`;
@@ -203,212 +278,6 @@ app.post('/api/entries', (req, res) => {
   insertMany(players);
 
   res.json({ success: true, entryId });
-});
-
-// --------------------
-// Entry count (PUBLIC)
-// --------------------
-app.get('/api/entries/count', (req, res) => {
-  const email = req.query.email;
-
-  if (!email) {
-    return res.status(400).json({ error: 'Email required' });
-  }
-
-  const stmt = db.prepare(
-    'SELECT COUNT(*) as count FROM entries WHERE email = ?'
-  );
-  const result = stmt.get(email);
-
-  res.json({ count: result.count });
-});
-
-// --------------------
-// 🌐 PUBLIC LEADERBOARD (NO EMAILS)
-// --------------------
-app.get('/api/leaderboard', (req, res) => {
-  const entries = db.prepare(`
-    SELECT
-      e.id,
-      e.entry_name,
-      SUM(
-        COALESCE(s.wildcard, 0) +
-        COALESCE(s.divisional, 0) +
-        COALESCE(s.conference, 0) +
-        COALESCE(s.superbowl, 0)
-      ) AS total_score
-    FROM entries e
-    JOIN entry_players p ON e.id = p.entry_id
-    LEFT JOIN player_scores s ON p.player_id = s.player_id
-    GROUP BY e.id
-    ORDER BY total_score DESC, e.created_at ASC
-  `).all();
-
-  res.json(entries);
-});
-
-// --------------------
-// Admin: get all entries + leaderboard
-// --------------------
-app.get('/api/admin/entries', requireAdmin, (req, res) => {
-  const entries = db.prepare(`
-    SELECT
-      e.id,
-      e.entry_name,
-      e.email,
-      e.created_at,
-      SUM(
-        COALESCE(s.wildcard, 0) +
-        COALESCE(s.divisional, 0) +
-        COALESCE(s.conference, 0) +
-        COALESCE(s.superbowl, 0)
-      ) AS total_score
-    FROM entries e
-    JOIN entry_players p ON e.id = p.entry_id
-    LEFT JOIN player_scores s ON p.player_id = s.player_id
-    GROUP BY e.id
-    ORDER BY total_score DESC, e.created_at ASC
-  `).all();
-
-  const playersStmt = db.prepare(`
-    SELECT
-      p.position,
-      p.player_name,
-      p.team,
-      COALESCE(s.wildcard, 0)   AS wildcard,
-      COALESCE(s.divisional, 0) AS divisional,
-      COALESCE(s.conference, 0) AS conference,
-      COALESCE(s.superbowl, 0)  AS superbowl,
-      COALESCE(s.wildcard, 0) +
-      COALESCE(s.divisional, 0) +
-      COALESCE(s.conference, 0) +
-      COALESCE(s.superbowl, 0) AS player_total
-    FROM entry_players p
-    LEFT JOIN player_scores s ON p.player_id = s.player_id
-    WHERE p.entry_id = ?
-    ORDER BY p.position
-  `);
-
-  const result = entries.map(e => ({
-    ...e,
-    players: playersStmt.all(e.id)
-  }));
-
-  res.json(result);
-});
-
-// --------------------
-// Admin: export entries CSV
-// --------------------
-app.get('/api/admin/export', requireAdmin, (req, res) => {
-  const rows = db.prepare(`
-    SELECT
-      e.entry_name,
-      e.email,
-      e.created_at,
-      p.position,
-      p.player_name,
-      p.team
-    FROM entries e
-    JOIN entry_players p ON e.id = p.entry_id
-    ORDER BY e.created_at DESC, e.entry_name
-  `).all();
-
-  let csv = 'Entry Name,Email,Created At,Position,Player Name,Team\n';
-
-  rows.forEach(r => {
-    csv += `"${r.entry_name}","${r.email}","${r.created_at}","${r.position}","${r.player_name}","${r.team}"\n`;
-  });
-
-  res.header('Content-Type', 'text/csv');
-  res.header('Content-Disposition', 'attachment; filename="entries.csv"');
-  res.send(csv);
-});
-
-// --------------------
-// Admin: get player scores
-// --------------------
-app.get('/api/admin/player-scores', requireAdmin, (req, res) => {
-  const csv = fs.readFileSync(path.join(__dirname, 'players.csv'), 'utf8');
-  const lines = csv.trim().split('\n');
-
-  const headers = lines[0].split(',');
-  const players = lines.slice(1).map(line => {
-    const values = line.split(',');
-    const p = {};
-    headers.forEach((h, i) => {
-      p[h.trim()] = values[i].trim();
-    });
-    return p;
-  });
-
-  const scoreStmt = db.prepare(`
-    SELECT wildcard, divisional, conference, superbowl
-    FROM player_scores
-    WHERE player_id = ?
-  `);
-
-  const result = players.map(p => {
-    const scores = scoreStmt.get(p.PlayerID) || {};
-    return {
-      player_id: p.PlayerID,
-      player_name: p.PlayerName,
-      position: p.Position,
-      team: p.TeamID,
-      wildcard: scores.wildcard || 0,
-      divisional: scores.divisional || 0,
-      conference: scores.conference || 0,
-      superbowl: scores.superbowl || 0
-    };
-  });
-
-  res.json(result);
-});
-
-// --------------------
-// Admin: save player scores
-// --------------------
-app.post('/api/admin/player-scores', requireAdmin, (req, res) => {
-  const { player_id, wildcard, divisional, conference, superbowl } = req.body;
-
-  if (!player_id) {
-    return res.status(400).json({ error: 'player_id required' });
-  }
-
-  db.prepare(`
-    INSERT INTO player_scores
-      (player_id, wildcard, divisional, conference, superbowl)
-    VALUES (?, ?, ?, ?, ?)
-    ON CONFLICT(player_id) DO UPDATE SET
-      wildcard   = excluded.wildcard,
-      divisional = excluded.divisional,
-      conference = excluded.conference,
-      superbowl  = excluded.superbowl
-  `).run(
-    player_id,
-    wildcard || 0,
-    divisional || 0,
-    conference || 0,
-    superbowl || 0
-  );
-
-  res.json({ success: true });
-});
-
-// --------------------
-// Admin: reset season (DANGEROUS)
-// --------------------
-app.post('/api/admin/reset-season', requireAdmin, (req, res) => {
-  try {
-    db.prepare('DELETE FROM entry_players').run();
-    db.prepare('DELETE FROM entries').run();
-    db.prepare('DELETE FROM player_scores').run();
-
-    res.json({ success: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to reset season' });
-  }
 });
 
 // --------------------
