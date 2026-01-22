@@ -54,7 +54,7 @@
 
 <body>
 
-<!-- 🔴 Reset for New Season Button -->
+<!-- 🔴 Top Right Buttons -->
 <div style="position: absolute; top: 15px; right: 15px; display: flex; gap: 10px;">
   <button
     onclick="window.location.href='/admin-playoff-setup.html'"
@@ -87,7 +87,6 @@
   </button>
 </div>
 
-
 <h1>Admin Dashboard</h1>
 
 <div class="menu">
@@ -111,12 +110,12 @@
     Public Leaderboard
   </a>
 
-  <a class="btn gray" href="/api/admin/export">
+  <!-- ✅ FIXED EXPORT BUTTON -->
+  <button class="btn gray" onclick="exportCSV()">
     Export Entries (CSV)
-  </a>
+  </button>
 </div>
 
-<!-- 🔐 Reset logic -->
 <script>
   async function resetSeason() {
     const confirmText =
@@ -124,9 +123,7 @@
       "This will permanently delete ALL entries, player selections, and scores.\n\n" +
       "This cannot be undone.";
 
-    if (!confirm(confirmText)) {
-      return;
-    }
+    if (!confirm(confirmText)) return;
 
     const token = localStorage.getItem("adminToken");
 
@@ -150,6 +147,42 @@
 
     alert("Season reset complete.");
     window.location.reload();
+  }
+
+  // ✅ CSV EXPORT WITH AUTH
+  async function exportCSV() {
+    const token = localStorage.getItem("adminToken");
+
+    if (!token) {
+      alert("Admin session expired. Please log in again.");
+      window.location.href = "/admin-login.html";
+      return;
+    }
+
+    const res = await fetch("/api/admin/export", {
+      headers: {
+        "Authorization": token
+      }
+    });
+
+    if (!res.ok) {
+      alert("Failed to export CSV. Please log in again.");
+      localStorage.removeItem("adminToken");
+      window.location.href = "/admin-login.html";
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "entries.csv";
+    document.body.appendChild(a);
+    a.click();
+
+    a.remove();
+    window.URL.revokeObjectURL(url);
   }
 </script>
 
