@@ -7,11 +7,15 @@ const app = express();
 const PORT = 3000;
 
 // --------------------
+// Files
+// --------------------
+const SETTINGS_FILE = '/var/data/settings.json';
+
+// --------------------
 // Database
 // --------------------
 const db = new Database('/var/data/entries.db');
 
-// Create tables if they don't exist
 db.prepare(`
   CREATE TABLE IF NOT EXISTS entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,6 +48,24 @@ db.prepare(`
 `).run();
 
 // --------------------
+// Settings helpers (Phase 4A)
+// --------------------
+function getSettings() {
+  if (!fs.existsSync(SETTINGS_FILE)) {
+    return { entriesOpen: true };
+  }
+  return JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
+}
+
+function saveSettings(settings) {
+  fs.writeFileSync(
+    SETTINGS_FILE,
+    JSON.stringify(settings, null, 2),
+    'utf8'
+  );
+}
+
+// --------------------
 // Middleware
 // --------------------
 app.use(express.json());
@@ -72,6 +94,7 @@ function requireAdmin(req, res, next) {
 // --------------------
 app.post("/admin-login", (req, res) => {
   const { password } = req.body;
+
   if (password !== process.env.ADMIN_PASSWORD) {
     return res.status(401).json({ error: "Invalid password" });
   }
@@ -106,9 +129,14 @@ app.get('/api/players', (req, res) => {
 });
 
 // --------------------
-// PUBLIC: save entry
+// PUBLIC: save entry (ENTRY LOCK ENFORCED)
 // --------------------
 app.post('/api/entries', (req, res) => {
+  const settings = getSettings();
+  if (!settings.entriesOpen) {
+    return res.status(403).json({ error: 'Entries are currently closed' });
+  }
+
   const { entryName, email, players } = req.body;
 
   if (!entryName || !email || !Array.isArray(players) || players.length !== 14) {
@@ -120,10 +148,14 @@ app.post('/api/entries', (req, res) => {
     .get(email).c;
 
   if (count >= 4) {
-    return res.status(400).json({ error: 'Maximum of 4 entries per email reached.' });
+    return res.status(400).json({
+      error: 'Maximum of 4 entries per email reached.'
+    });
   }
 
-  const finalName = count > 0 ? `${entryName}-${count + 1}` : entryName;
+  const finalName = count > 0
+    ? `${entryName}-${count + 1}`
+    : entryName;
 
   const result = db
     .prepare('INSERT INTO entries (entry_name, email) VALUES (?, ?)')
@@ -169,7 +201,7 @@ app.get('/api/entries/count', (req, res) => {
 });
 
 // --------------------
-// PUBLIC: leaderboard (no emails)
+// PUBLIC: leaderboard
 // --------------------
 app.get('/api/leaderboard', (req, res) => {
   const rows = db.prepare(`
@@ -192,6 +224,26 @@ app.get('/api/leaderboard', (req, res) => {
 });
 
 // --------------------
+// Admin: entry lock status (Phase 4A)
+// --------------------
+app.get('/api/admin/entry-status', requireAdmin, (req, res) => {
+  res.json(getSettings());
+});
+
+app.post('/api/admin/entry-status', requireAdmin, (req, res) => {
+  const { entriesOpen } = req.body;
+  if (typeof entriesOpen !== 'boolean') {
+    return res.status(400).json({ error: 'entriesOpen must be boolean' });
+  }
+
+  const settings = getSettings();
+  settings.entriesOpen = entriesOpen;
+  saveSettings(settings);
+
+  res.json({ success: true, entriesOpen });
+});
+
+// --------------------
 // Admin: playoff teams
 // --------------------
 app.get('/api/admin/playoff-teams', requireAdmin, (req, res) => {
@@ -205,7 +257,9 @@ app.post('/api/admin/playoff-teams', requireAdmin, (req, res) => {
   if (!Array.isArray(teams) || teams.length !== 14) {
     return res.status(400).json({ error: 'Exactly 14 teams required' });
   }
-  fs.writeFileSync('/var/data/playoff-teams.json', JSON.stringify({ teams }, null, 2));
+  fs.writeFileSync(file = '/var/data/playoff-teams.json',
+    JSON.stringify({ teams }, null, 2)
+  );
   res.json({ success: true });
 });
 
@@ -228,7 +282,10 @@ app.get('/api/admin/player-pool', requireAdmin, (req, res) => {
 });
 
 app.post('/api/admin/player-pool', requireAdmin, (req, res) => {
-  fs.writeFileSync('/var/data/player-pool.json', JSON.stringify(req.body.pool, null, 2));
+  fs.writeFileSync(
+    '/var/data/player-pool.json',
+    JSON.stringify(req.body.pool, null, 2)
+  );
   res.json({ success: true });
 });
 
@@ -236,8 +293,13 @@ app.post('/api/admin/player-pool', requireAdmin, (req, res) => {
 // Admin: generate players.csv
 // --------------------
 app.post('/api/admin/generate-players-csv', requireAdmin, (req, res) => {
-  const teams = JSON.parse(fs.readFileSync('/var/data/playoff-teams.json')).teams;
-  const pool = JSON.parse(fs.readFileSync('/var/data/player-pool.json'));
+  const teams = JSON.parse(
+    fs.readFileSync('/var/data/playoff-teams.json')
+  ).teams;
+
+  const pool = JSON.parse(
+    fs.readFileSync('/var/data/player-pool.json')
+  );
 
   const rows = ['PlayerID,PlayerName,Position,TeamID'];
 
@@ -255,12 +317,17 @@ app.post('/api/admin/generate-players-csv', requireAdmin, (req, res) => {
 
   teams.forEach(team => add('K', team, `${team}K`));
 
-  fs.writeFileSync(path.join(__dirname, 'players.csv'), rows.join('\n'), 'utf8');
+  fs.writeFileSync(
+    path.join(__dirname, 'players.csv'),
+    rows.join('\n'),
+    'utf8'
+  );
 
   res.json({ success: true, count: rows.length - 1 });
 });
+
 // --------------------
-// Admin: get all entries (FULL DETAILS)
+// Admin: get all entries
 // --------------------
 app.get('/api/admin/entries', requireAdmin, (req, res) => {
   const entries = db.prepare(`
@@ -287,10 +354,10 @@ app.get('/api/admin/entries', requireAdmin, (req, res) => {
       p.position,
       p.player_name,
       p.team,
-      COALESCE(s.wildcard,0)   AS wildcard,
+      COALESCE(s.wildcard,0) AS wildcard,
       COALESCE(s.divisional,0) AS divisional,
       COALESCE(s.conference,0) AS conference,
-      COALESCE(s.superbowl,0)  AS superbowl,
+      COALESCE(s.superbowl,0) AS superbowl,
       COALESCE(s.wildcard,0) +
       COALESCE(s.divisional,0) +
       COALESCE(s.conference,0) +
@@ -301,12 +368,10 @@ app.get('/api/admin/entries', requireAdmin, (req, res) => {
     ORDER BY p.position
   `);
 
-  const result = entries.map(e => ({
+  res.json(entries.map(e => ({
     ...e,
     players: playersStmt.all(e.id)
-  }));
-
-  res.json(result);
+  })));
 });
 
 // --------------------
@@ -350,7 +415,13 @@ app.post('/api/admin/player-scores', requireAdmin, (req, res) => {
       divisional=excluded.divisional,
       conference=excluded.conference,
       superbowl=excluded.superbowl
-  `).run(player_id, wildcard||0, divisional||0, conference||0, superbowl||0);
+  `).run(
+    player_id,
+    wildcard || 0,
+    divisional || 0,
+    conference || 0,
+    superbowl || 0
+  );
 
   res.json({ success: true });
 });
@@ -363,6 +434,34 @@ app.post('/api/admin/reset-season', requireAdmin, (req, res) => {
   db.prepare('DELETE FROM entries').run();
   db.prepare('DELETE FROM player_scores').run();
   res.json({ success: true });
+});
+
+// --------------------
+// Admin: export entries CSV
+// --------------------
+app.get('/api/admin/export', requireAdmin, (req, res) => {
+  const rows = db.prepare(`
+    SELECT
+      e.entry_name,
+      e.email,
+      e.created_at,
+      p.position,
+      p.player_name,
+      p.team
+    FROM entries e
+    JOIN entry_players p ON e.id = p.entry_id
+    ORDER BY e.created_at DESC, e.entry_name
+  `).all();
+
+  let csv = 'Entry Name,Email,Created At,Position,Player Name,Team\n';
+
+  rows.forEach(r => {
+    csv += `"${r.entry_name}","${r.email}","${r.created_at}","${r.position}","${r.player_name}","${r.team}"\n`;
+  });
+
+  res.header('Content-Type', 'text/csv');
+  res.header('Content-Disposition', 'attachment; filename="entries.csv"');
+  res.send(csv);
 });
 
 // --------------------
