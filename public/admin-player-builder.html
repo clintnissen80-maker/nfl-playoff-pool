@@ -31,7 +31,7 @@
 
     .row {
       display: grid;
-      grid-template-columns: 120px 1fr;
+      grid-template-columns: 120px 1fr auto;
       gap: 10px;
       align-items: center;
       margin-bottom: 10px;
@@ -41,12 +41,32 @@
       font-weight: bold;
     }
 
-    input {
+    select, input {
       padding: 6px;
       font-size: 14px;
     }
 
-    button.save-btn {
+    button {
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+
+    .add-btn {
+      background: #1565c0;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+
+    .remove-btn {
+      background: #c62828;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+
+    .save-btn {
       background: #2e7d32;
       color: white;
       font-size: 16px;
@@ -78,9 +98,17 @@
 
 <h1>Player Pool Builder</h1>
 
+<!-- ================= QB SECTION ================= -->
 <div class="section">
   <h2>Quarterbacks (QB)</h2>
   <div id="qbContainer">Loading…</div>
+</div>
+
+<!-- ================= RB SECTION ================= -->
+<div class="section">
+  <h2>Running Backs (RB)</h2>
+  <div id="rbContainer"></div>
+  <button class="add-btn" onclick="addRB()">+ Add RB</button>
 </div>
 
 <button class="save-btn" onclick="savePool()">
@@ -91,12 +119,15 @@
 
 <script>
   const qbContainer = document.getElementById("qbContainer");
+  const rbContainer = document.getElementById("rbContainer");
   const statusDiv = document.getElementById("status");
   const token = localStorage.getItem("adminToken");
 
   let teams = [];
+  let pool = {};
 
-  async function loadQBSection() {
+  // ---------------- LOAD DATA ----------------
+  async function loadData() {
     const res = await fetch('/api/admin/player-pool', {
       headers: { 'Authorization': token }
     });
@@ -108,8 +139,14 @@
 
     const data = await res.json();
     teams = data.teams;
-    const pool = data.pool || {};
+    pool = data.pool || {};
 
+    renderQB();
+    renderRB();
+  }
+
+  // ---------------- QB ----------------
+  function renderQB() {
     qbContainer.innerHTML = '';
 
     teams.forEach(team => {
@@ -129,7 +166,7 @@
           type="text"
           placeholder="QB last name"
           value="${qbName}"
-          data-team="${team}"
+          data-qb-team="${team}"
         />
       `;
 
@@ -137,23 +174,69 @@
     });
   }
 
+  // ---------------- RB ----------------
+  function renderRB() {
+    rbContainer.innerHTML = '';
+
+    if (!pool.RB) pool.RB = {};
+
+    Object.keys(pool.RB).forEach(team => {
+      pool.RB[team].forEach(player => {
+        createRBRow(team, player.name);
+      });
+    });
+  }
+
+  function createRBRow(team = '', name = '') {
+    const row = document.createElement('div');
+    row.className = 'row';
+
+    row.innerHTML = `
+      <select>
+        ${teams.map(t => `<option value="${t}" ${t === team ? 'selected' : ''}>${t}</option>`).join('')}
+      </select>
+      <input type="text" placeholder="RB last name" value="${name}">
+      <button class="remove-btn" onclick="this.parentElement.remove()">✖</button>
+    `;
+
+    rbContainer.appendChild(row);
+  }
+
+  function addRB() {
+    createRBRow();
+  }
+
+  // ---------------- SAVE ----------------
   async function savePool() {
     statusDiv.textContent = '';
     statusDiv.className = 'status';
 
-    const pool = { QB: {} };
+    const newPool = { QB: {}, RB: {} };
 
+    // QB validation (unchanged)
     teams.forEach(team => {
-      const input = document.querySelector(`input[data-team="${team}"]`);
+      const input = document.querySelector(`input[data-qb-team="${team}"]`);
       const name = input.value.trim();
 
       if (!name) {
         statusDiv.textContent = `Missing QB for team ${team}`;
         statusDiv.classList.add('error');
-        throw new Error('Validation failed');
+        return;
       }
 
-      pool.QB[team] = [{ name }];
+      newPool.QB[team] = [{ name }];
+    });
+
+    // RB collection
+    const rbRows = rbContainer.querySelectorAll('.row');
+    rbRows.forEach(row => {
+      const team = row.querySelector('select').value;
+      const name = row.querySelector('input').value.trim();
+
+      if (!name) return;
+
+      if (!newPool.RB[team]) newPool.RB[team] = [];
+      newPool.RB[team].push({ name });
     });
 
     const res = await fetch('/api/admin/player-pool', {
@@ -162,7 +245,7 @@
         'Content-Type': 'application/json',
         'Authorization': token
       },
-      body: JSON.stringify({ pool })
+      body: JSON.stringify({ pool: newPool })
     });
 
     const data = await res.json();
@@ -173,11 +256,11 @@
       return;
     }
 
-    statusDiv.textContent = 'QB player pool saved successfully';
+    statusDiv.textContent = 'QB + RB player pool saved successfully';
     statusDiv.classList.add('success');
   }
 
-  loadQBSection();
+  loadData();
 </script>
 
 </body>
