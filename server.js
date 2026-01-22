@@ -7,57 +7,9 @@ const app = express();
 const PORT = 3000;
 
 // --------------------
-// Season config files
-// --------------------
-const PLAYOFF_TEAMS_FILE = '/var/data/playoff-teams.json';
-const PLAYER_POOL_FILE = '/var/data/player-pool.json';
-
-function getPlayoffTeams() {
-  if (!fs.existsSync(PLAYOFF_TEAMS_FILE)) return [];
-  return JSON.parse(fs.readFileSync(PLAYOFF_TEAMS_FILE, 'utf8')).teams || [];
-}
-
-function getPlayerPool() {
-  if (!fs.existsSync(PLAYER_POOL_FILE)) return {};
-  return JSON.parse(fs.readFileSync(PLAYER_POOL_FILE, 'utf8'));
-}
-
-// --------------------
 // Database
 // --------------------
 const db = new Database('/var/data/entries.db');
-
-// Create tables if they don't exist
-db.prepare(`
-  CREATE TABLE IF NOT EXISTS entries (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    entry_name TEXT NOT NULL,
-    email TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`).run();
-
-db.prepare(`
-  CREATE TABLE IF NOT EXISTS entry_players (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    entry_id INTEGER NOT NULL,
-    player_id TEXT NOT NULL,
-    player_name TEXT NOT NULL,
-    position TEXT NOT NULL,
-    team TEXT NOT NULL,
-    FOREIGN KEY (entry_id) REFERENCES entries(id)
-  )
-`).run();
-
-db.prepare(`
-  CREATE TABLE IF NOT EXISTS player_scores (
-    player_id TEXT PRIMARY KEY,
-    wildcard INTEGER DEFAULT 0,
-    divisional INTEGER DEFAULT 0,
-    conference INTEGER DEFAULT 0,
-    superbowl INTEGER DEFAULT 0
-  )
-`).run();
 
 // --------------------
 // Middleware
@@ -70,10 +22,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // --------------------
 function requireAdmin(req, res, next) {
   const token = req.headers.authorization;
-
-  if (!token) {
-    return res.status(403).json({ error: "Admin only" });
-  }
+  if (!token) return res.status(403).json({ error: "Admin only" });
 
   try {
     const decoded = Buffer.from(token, "base64").toString();
@@ -82,7 +31,7 @@ function requireAdmin(req, res, next) {
     }
     next();
   } catch {
-    return res.status(403).json({ error: "Invalid token" });
+    res.status(403).json({ error: "Invalid token" });
   }
 }
 
@@ -91,193 +40,128 @@ function requireAdmin(req, res, next) {
 // --------------------
 app.post("/admin-login", (req, res) => {
   const { password } = req.body;
-
   if (password !== process.env.ADMIN_PASSWORD) {
     return res.status(401).json({ error: "Invalid password" });
   }
 
-  const token = Buffer.from(
-    `${password}:${Date.now()}`
-  ).toString("base64");
-
+  const token = Buffer.from(`${password}:${Date.now()}`).toString("base64");
   res.json({ token });
 });
 
 // --------------------
-// Health check
+// Health
 // --------------------
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
 // --------------------
-// Load players from CSV (PUBLIC)
+// PUBLIC: load players.csv
 // --------------------
 app.get('/api/players', (req, res) => {
   const csv = fs.readFileSync(path.join(__dirname, 'players.csv'), 'utf8');
   const lines = csv.trim().split('\n');
-
   const headers = lines[0].split(',');
+
   const players = lines.slice(1).map(line => {
     const values = line.split(',');
-    const player = {};
-    headers.forEach((h, i) => {
-      player[h.trim()] = values[i].trim();
-    });
-    return player;
+    const p = {};
+    headers.forEach((h, i) => p[h.trim()] = values[i].trim());
+    return p;
   });
 
   res.json(players);
 });
 
 // --------------------
-// Admin: get saved playoff teams
+// Admin: playoff teams
 // --------------------
 app.get('/api/admin/playoff-teams', requireAdmin, (req, res) => {
-  if (!fs.existsSync(PLAYOFF_TEAMS_FILE)) {
-    return res.json({ teams: [] });
-  }
-  res.json(JSON.parse(fs.readFileSync(PLAYOFF_TEAMS_FILE, 'utf8')));
+  const file = '/var/data/playoff-teams.json';
+  if (!fs.existsSync(file)) return res.json({ teams: [] });
+  res.json(JSON.parse(fs.readFileSync(file, 'utf8')));
 });
 
-// --------------------
-// Admin: save playoff teams
-// --------------------
 app.post('/api/admin/playoff-teams', requireAdmin, (req, res) => {
   const { teams } = req.body;
-
   if (!Array.isArray(teams) || teams.length !== 14) {
     return res.status(400).json({ error: 'Exactly 14 teams required' });
   }
-
-  fs.writeFileSync(
-    PLAYOFF_TEAMS_FILE,
-    JSON.stringify({ teams }, null, 2),
-    'utf8'
-  );
-
+  fs.writeFileSync('/var/data/playoff-teams.json', JSON.stringify({ teams }, null, 2));
   res.json({ success: true });
 });
 
-// ====================
-// PHASE 3A – PLAYER POOL BACKEND
-// ====================
-
 // --------------------
-// Admin: get player pool
+// Admin: player pool
 // --------------------
 app.get('/api/admin/player-pool', requireAdmin, (req, res) => {
-  const playoffTeams = getPlayoffTeams();
-  if (playoffTeams.length !== 14) {
-    return res.status(400).json({ error: 'Playoff teams not set' });
-  }
+  const teamsFile = '/var/data/playoff-teams.json';
+  const poolFile = '/var/data/player-pool.json';
 
-  res.json({
-    teams: playoffTeams,
-    pool: getPlayerPool()
-  });
+  const teams = fs.existsSync(teamsFile)
+    ? JSON.parse(fs.readFileSync(teamsFile)).teams
+    : [];
+
+  const pool = fs.existsSync(poolFile)
+    ? JSON.parse(fs.readFileSync(poolFile))
+    : {};
+
+  res.json({ teams, pool });
 });
 
-// --------------------
-// Admin: save player pool
-// --------------------
 app.post('/api/admin/player-pool', requireAdmin, (req, res) => {
   const { pool } = req.body;
-  const playoffTeams = getPlayoffTeams();
-
-  if (!pool || typeof pool !== 'object') {
-    return res.status(400).json({ error: 'Invalid pool format' });
+  if (!pool || !pool.QB) {
+    return res.status(400).json({ error: 'Invalid player pool' });
   }
 
-  // Validate QB: exactly 1 per team
-  if (pool.QB) {
-    for (const team of playoffTeams) {
-      const qbs = pool.QB[team] || [];
-      if (qbs.length !== 1) {
-        return res.status(400).json({
-          error: `Team ${team} must have exactly 1 QB`
-        });
-      }
-    }
-  }
-
-  // Validate all teams are playoff teams
-  for (const position of Object.keys(pool)) {
-    for (const team of Object.keys(pool[position])) {
-      if (!playoffTeams.includes(team)) {
-        return res.status(400).json({
-          error: `Invalid team ${team} in ${position}`
-        });
-      }
-    }
-  }
-
-  fs.writeFileSync(
-    PLAYER_POOL_FILE,
-    JSON.stringify(pool, null, 2),
-    'utf8'
-  );
-
+  fs.writeFileSync('/var/data/player-pool.json', JSON.stringify(pool, null, 2));
   res.json({ success: true });
 });
 
-// ====================
-// EXISTING ENTRY + ADMIN ROUTES
-// ====================
-
 // --------------------
-// Save entry (PUBLIC)
+// 🚀 Phase 3C: Generate players.csv
 // --------------------
-app.post('/api/entries', (req, res) => {
-  const { entryName, email, players } = req.body;
+app.post('/api/admin/generate-players-csv', requireAdmin, (req, res) => {
+  const teamsFile = '/var/data/playoff-teams.json';
+  const poolFile = '/var/data/player-pool.json';
 
-  if (!entryName || !email || !Array.isArray(players) || players.length !== 14) {
-    return res.status(400).json({ error: 'Invalid entry data' });
+  if (!fs.existsSync(teamsFile) || !fs.existsSync(poolFile)) {
+    return res.status(400).json({ error: 'Missing playoff teams or player pool' });
   }
 
-  const countStmt = db.prepare(
-    'SELECT COUNT(*) as count FROM entries WHERE email = ?'
-  );
-  const existingCount = countStmt.get(email).count;
+  const teams = JSON.parse(fs.readFileSync(teamsFile)).teams;
+  const pool = JSON.parse(fs.readFileSync(poolFile));
 
-  if (existingCount >= 4) {
-    return res.status(400).json({
-      error: 'Maximum of 4 entries per email reached.'
+  let rows = [];
+  rows.push('PlayerID,PlayerName,Position,TeamID');
+
+  function addPlayer(pos, team, name) {
+    const cleanName = name.replace(/[^a-zA-Z0-9]/g, '');
+    const playerID = `${pos}_${team}_${cleanName}`;
+    rows.push(`${playerID},${name},${pos},${team}`);
+  }
+
+  // QB / RB / WR / TE
+  ['QB','RB','WR','TE'].forEach(pos => {
+    if (!pool[pos]) return;
+    Object.keys(pool[pos]).forEach(team => {
+      pool[pos][team].forEach(p => addPlayer(pos, team, p.name));
     });
-  }
-
-  let finalEntryName = entryName;
-  if (existingCount > 0) {
-    finalEntryName = `${entryName}-${existingCount + 1}`;
-  }
-
-  const insertEntry = db.prepare(
-    'INSERT INTO entries (entry_name, email) VALUES (?, ?)'
-  );
-  const result = insertEntry.run(finalEntryName, email);
-  const entryId = result.lastInsertRowid;
-
-  const insertPlayer = db.prepare(
-    `INSERT INTO entry_players
-     (entry_id, player_id, player_name, position, team)
-     VALUES (?, ?, ?, ?, ?)`
-  );
-
-  const insertMany = db.transaction(players => {
-    for (const p of players) {
-      insertPlayer.run(
-        entryId,
-        p.id,
-        p.name,
-        p.position,
-        p.team
-      );
-    }
   });
 
-  insertMany(players);
+  // Kickers (auto)
+  teams.forEach(team => {
+    addPlayer('K', team, `${team}K`);
+  });
 
-  res.json({ success: true, entryId });
+  fs.writeFileSync(
+    path.join(__dirname, 'players.csv'),
+    rows.join('\n'),
+    'utf8'
+  );
+
+  res.json({ success: true, count: rows.length - 1 });
 });
 
 // --------------------
