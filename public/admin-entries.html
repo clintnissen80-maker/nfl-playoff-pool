@@ -59,11 +59,13 @@
 <script>
   const token = localStorage.getItem("adminToken");
 
-  fetch("/api/admin/entries", {
-    headers: {
-      Authorization: token
-    }
-  })
+fetch("/api/admin/entries", {
+  method: "GET",
+  headers: {
+    "Authorization": localStorage.getItem("adminToken")
+  }
+})
+
     .then(res => {
       if (res.status === 403) {
         throw new Error("unauthorized");
