@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (!localStorage.getItem("adminToken")) {
+      window.location.href = "/admin-login.html";
+    }
+  </script>
+
+  <meta charset="UTF-8" />
+  <title>Admin – Player Builder</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 30px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 25px;
+      border-radius: 6px;
+    }
+
+    .section h2 {
+      margin-top: 0;
+    }
+
+    .placeholder {
+      color: #777;
+      font-style: italic;
+    }
+
+    button {
+      padding: 10px 14px;
+      font-size: 14px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .save-btn {
+      background: #2e7d32;
+      color: white;
+      font-size: 16px;
+      padding: 14px;
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>Player Pool Builder</h1>
+
+<div class="section">
+  <h2>Quarterbacks (QB)</h2>
+  <p class="placeholder">
+    One QB per playoff team.  
+    (UI coming next step)
+  </p>
+</div>
+
+<div class="section">
+  <h2>Running Backs (RB)</h2>
+  <p class="placeholder">
+    Add as many RBs per team as needed.
+  </p>
+</div>
+
+<div class="section">
+  <h2>Wide Receivers (WR)</h2>
+  <p class="placeholder">
+    Add multiple WRs per team.
+  </p>
+</div>
+
+<div class="section">
+  <h2>Tight Ends (TE)</h2>
+  <p class="placeholder">
+    Add one or more TEs per team.
+  </p>
+</div>
+
+<button class="save-btn" disabled>
+  Save Player Pool (disabled)
+</button>
+
+</body>
+</html>
