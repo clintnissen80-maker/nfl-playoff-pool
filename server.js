@@ -259,6 +259,55 @@ app.post('/api/admin/generate-players-csv', requireAdmin, (req, res) => {
 
   res.json({ success: true, count: rows.length - 1 });
 });
+// --------------------
+// Admin: get all entries (FULL DETAILS)
+// --------------------
+app.get('/api/admin/entries', requireAdmin, (req, res) => {
+  const entries = db.prepare(`
+    SELECT
+      e.id,
+      e.entry_name,
+      e.email,
+      e.created_at,
+      SUM(
+        COALESCE(s.wildcard,0) +
+        COALESCE(s.divisional,0) +
+        COALESCE(s.conference,0) +
+        COALESCE(s.superbowl,0)
+      ) AS total_score
+    FROM entries e
+    JOIN entry_players p ON e.id = p.entry_id
+    LEFT JOIN player_scores s ON p.player_id = s.player_id
+    GROUP BY e.id
+    ORDER BY total_score DESC, e.created_at ASC
+  `).all();
+
+  const playersStmt = db.prepare(`
+    SELECT
+      p.position,
+      p.player_name,
+      p.team,
+      COALESCE(s.wildcard,0)   AS wildcard,
+      COALESCE(s.divisional,0) AS divisional,
+      COALESCE(s.conference,0) AS conference,
+      COALESCE(s.superbowl,0)  AS superbowl,
+      COALESCE(s.wildcard,0) +
+      COALESCE(s.divisional,0) +
+      COALESCE(s.conference,0) +
+      COALESCE(s.superbowl,0) AS player_total
+    FROM entry_players p
+    LEFT JOIN player_scores s ON p.player_id = s.player_id
+    WHERE p.entry_id = ?
+    ORDER BY p.position
+  `);
+
+  const result = entries.map(e => ({
+    ...e,
+    players: playersStmt.all(e.id)
+  }));
+
+  res.json(result);
+});
 
 // --------------------
 // Admin: player scores
