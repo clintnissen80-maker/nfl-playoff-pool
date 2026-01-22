@@ -29,8 +29,21 @@
       border-radius: 6px;
     }
 
-    .section h2 {
-      margin-top: 0;
+    .row {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .team {
+      font-weight: bold;
+    }
+
+    input {
+      padding: 6px;
+      font-size: 14px;
     }
 
     .placeholder {
@@ -38,20 +51,16 @@
       font-style: italic;
     }
 
-    button {
-      padding: 10px 14px;
-      font-size: 14px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    .save-btn {
+    button.save-btn {
       background: #2e7d32;
       color: white;
       font-size: 16px;
       padding: 14px;
       width: 100%;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 20px;
     }
   </style>
 </head>
@@ -62,36 +71,62 @@
 
 <div class="section">
   <h2>Quarterbacks (QB)</h2>
-  <p class="placeholder">
-    One QB per playoff team.  
-    (UI coming next step)
-  </p>
-</div>
-
-<div class="section">
-  <h2>Running Backs (RB)</h2>
-  <p class="placeholder">
-    Add as many RBs per team as needed.
-  </p>
-</div>
-
-<div class="section">
-  <h2>Wide Receivers (WR)</h2>
-  <p class="placeholder">
-    Add multiple WRs per team.
-  </p>
-</div>
-
-<div class="section">
-  <h2>Tight Ends (TE)</h2>
-  <p class="placeholder">
-    Add one or more TEs per team.
-  </p>
+  <div id="qbContainer">
+    <p class="placeholder">Loading quarterbacks…</p>
+  </div>
 </div>
 
 <button class="save-btn" disabled>
   Save Player Pool (disabled)
 </button>
+
+<script>
+  const qbContainer = document.getElementById("qbContainer");
+  const token = localStorage.getItem("adminToken");
+
+  async function loadQBSection() {
+    const res = await fetch('/api/admin/player-pool', {
+      headers: { 'Authorization': token }
+    });
+
+    if (!res.ok) {
+      qbContainer.innerHTML = '<p class="placeholder">Failed to load data.</p>';
+      return;
+    }
+
+    const data = await res.json();
+    const teams = data.teams;
+    const pool = data.pool || {};
+
+    qbContainer.innerHTML = '';
+
+    teams.forEach(team => {
+      const qbName =
+        pool.QB &&
+        pool.QB[team] &&
+        pool.QB[team][0]
+          ? pool.QB[team][0].name
+          : '';
+
+      const row = document.createElement('div');
+      row.className = 'row';
+
+      row.innerHTML = `
+        <div class="team">${team}</div>
+        <input
+          type="text"
+          placeholder="QB last name"
+          value="${qbName}"
+          data-team="${team}"
+        />
+      `;
+
+      qbContainer.appendChild(row);
+    });
+  }
+
+  loadQBSection();
+</script>
 
 </body>
 </html>
