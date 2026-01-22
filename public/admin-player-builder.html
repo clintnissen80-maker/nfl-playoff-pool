@@ -46,11 +46,6 @@
       font-size: 14px;
     }
 
-    .placeholder {
-      color: #777;
-      font-style: italic;
-    }
-
     button.save-btn {
       background: #2e7d32;
       color: white;
@@ -62,6 +57,20 @@
       cursor: pointer;
       margin-top: 20px;
     }
+
+    .status {
+      margin-top: 15px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .error {
+      color: #c62828;
+    }
+
+    .success {
+      color: #2e7d32;
+    }
   </style>
 </head>
 
@@ -71,18 +80,21 @@
 
 <div class="section">
   <h2>Quarterbacks (QB)</h2>
-  <div id="qbContainer">
-    <p class="placeholder">Loading quarterbacks…</p>
-  </div>
+  <div id="qbContainer">Loading…</div>
 </div>
 
-<button class="save-btn" disabled>
-  Save Player Pool (disabled)
+<button class="save-btn" onclick="savePool()">
+  Save Player Pool
 </button>
+
+<div id="status" class="status"></div>
 
 <script>
   const qbContainer = document.getElementById("qbContainer");
+  const statusDiv = document.getElementById("status");
   const token = localStorage.getItem("adminToken");
+
+  let teams = [];
 
   async function loadQBSection() {
     const res = await fetch('/api/admin/player-pool', {
@@ -90,12 +102,12 @@
     });
 
     if (!res.ok) {
-      qbContainer.innerHTML = '<p class="placeholder">Failed to load data.</p>';
+      qbContainer.innerHTML = 'Failed to load data.';
       return;
     }
 
     const data = await res.json();
-    const teams = data.teams;
+    teams = data.teams;
     const pool = data.pool || {};
 
     qbContainer.innerHTML = '';
@@ -123,6 +135,46 @@
 
       qbContainer.appendChild(row);
     });
+  }
+
+  async function savePool() {
+    statusDiv.textContent = '';
+    statusDiv.className = 'status';
+
+    const pool = { QB: {} };
+
+    teams.forEach(team => {
+      const input = document.querySelector(`input[data-team="${team}"]`);
+      const name = input.value.trim();
+
+      if (!name) {
+        statusDiv.textContent = `Missing QB for team ${team}`;
+        statusDiv.classList.add('error');
+        throw new Error('Validation failed');
+      }
+
+      pool.QB[team] = [{ name }];
+    });
+
+    const res = await fetch('/api/admin/player-pool', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token
+      },
+      body: JSON.stringify({ pool })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      statusDiv.textContent = data.error || 'Failed to save player pool';
+      statusDiv.classList.add('error');
+      return;
+    }
+
+    statusDiv.textContent = 'QB player pool saved successfully';
+    statusDiv.classList.add('success');
   }
 
   loadQBSection();
