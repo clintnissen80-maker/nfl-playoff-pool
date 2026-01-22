@@ -18,14 +18,17 @@
       padding: 30px;
       position: relative;
     }
+
     h1 {
       text-align: center;
       margin-bottom: 30px;
     }
+
     .menu {
       max-width: 400px;
       margin: 0 auto;
     }
+
     .btn {
       display: block;
       width: 100%;
@@ -40,55 +43,76 @@
       cursor: pointer;
       text-decoration: none;
     }
+
     .btn.green {
       background: #28a745;
     }
+
     .btn.gray {
       background: #6c757d;
     }
+
+    .btn.red {
+      background: #c62828;
+    }
+
     .btn:hover {
       opacity: 0.9;
+    }
+
+    /* Top corner stacks */
+    .top-left,
+    .top-right {
+      position: absolute;
+      top: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .top-left {
+      left: 15px;
+      width: 220px;
+    }
+
+    .top-right {
+      right: 15px;
+      width: 240px;
     }
   </style>
 </head>
 
 <body>
 
-<!-- 🔴 Top Right Buttons -->
-<div style="position: absolute; top: 15px; right: 15px; display: flex; gap: 10px;">
-  <button
-    onclick="window.location.href='/admin-playoff-setup.html'"
-    style="
-      background-color: #1565c0;
-      color: white;
-      border: none;
-      padding: 10px 14px;
-      font-weight: bold;
-      cursor: pointer;
-      border-radius: 4px;
-    "
-  >
+<!-- 🔝 TOP LEFT -->
+<div class="top-left">
+  <a class="btn" href="/leaderboard.html" target="_blank">
+    🌍 Public Leaderboard
+  </a>
+
+  <a class="btn gray" href="https://nfl-playoff-pool.onrender.com/" target="_blank">
+    📝 Public Entry Page
+  </a>
+</div>
+
+<!-- 🔝 TOP RIGHT (ORDER OF OPERATIONS) -->
+<div class="top-right">
+  <button class="btn red" onclick="resetSeason()">
+    🔴 Reset for New Season
+  </button>
+
+  <button class="btn" onclick="window.location.href='/admin-playoff-setup.html'">
     🏈 Setup Playoff Teams
   </button>
 
-  <button
-    onclick="resetSeason()"
-    style="
-      background-color: #c62828;
-      color: white;
-      border: none;
-      padding: 10px 14px;
-      font-weight: bold;
-      cursor: pointer;
-      border-radius: 4px;
-    "
-  >
-    🔴 Reset for New Season
+  <button class="btn green" onclick="window.location.href='/admin-player-builder.html'">
+    🧩 Build Player Pool
   </button>
 </div>
 
 <h1>Admin Dashboard</h1>
 
+<!-- 📋 MAIN MENU -->
 <div class="menu">
   <a class="btn green" href="/admin-scores.html">
     Enter Player Scores
@@ -98,19 +122,10 @@
     View All Entries
   </a>
 
-  <a class="btn" href="/admin-player-builder.html">
-    Build Player Pool
-  </a>
-
   <a class="btn" href="/admin.html">
     Admin Leaderboard
   </a>
 
-  <a class="btn" href="/leaderboard.html" target="_blank">
-    Public Leaderboard
-  </a>
-
-  <!-- ✅ FIXED EXPORT BUTTON -->
   <button class="btn gray" onclick="exportCSV()">
     Export Entries (CSV)
   </button>
@@ -149,7 +164,6 @@
     window.location.reload();
   }
 
-  // ✅ CSV EXPORT WITH AUTH
   async function exportCSV() {
     const token = localStorage.getItem("adminToken");
 
