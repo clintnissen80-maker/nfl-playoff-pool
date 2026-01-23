@@ -103,6 +103,30 @@
       max-width: 400px;
       margin: 0 auto;
     }
+/* ================================
+   MOBILE LAYOUT FIX (SAFE)
+   ================================ */
+@media (max-width: 700px) {
+
+  /* Prevent absolute-position buttons from overlapping */
+  body {
+    padding-top: 15px;
+  }
+
+  /* Any absolute-position button containers */
+  div[style*="position: absolute"] {
+    position: static !important;
+    width: 100%;
+    margin-bottom: 12px;
+  }
+
+  /* Make all buttons full-width on mobile */
+  button,
+  .btn {
+    width: 100% !important;
+  }
+}
+
   </style>
 </head>
 
