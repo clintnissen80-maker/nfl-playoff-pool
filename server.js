@@ -16,6 +16,22 @@ const SETTINGS_FILE = '/var/data/settings.json';
 // --------------------
 const db = new Database('/var/data/entries.db');
 
+// --------------------
+// DB migration: add paid / notes columns if missing
+// --------------------
+try {
+  db.prepare(`ALTER TABLE entries ADD COLUMN paid INTEGER DEFAULT 0`).run();
+} catch (e) {
+  // column already exists
+}
+
+try {
+  db.prepare(`ALTER TABLE entries ADD COLUMN notes TEXT DEFAULT ''`).run();
+} catch (e) {
+  // column already exists
+}
+
+
 db.prepare(`
   CREATE TABLE IF NOT EXISTS entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
