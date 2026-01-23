@@ -186,7 +186,7 @@
     <a class="btn blue" href="/admin-entries.html">💰 Entries & Payments</a>  
     <a class="btn green" href="/admin-scores.html">🧮 Enter Player Scores</a>
     <a class="btn blue" href="/admin.html">📊 Detailed Scoreboard</a>
-    <button class="btn gray" onclick="exportCSV()">📈 Export Entries (CSV)</a>
+    <button class="btn gray" onclick="exportCSV()">📈 Export Entries (CSV)</button>
 </div>
 
 <script>
@@ -197,12 +197,14 @@
     const res = await fetch("/api/admin/entry-status", {
       headers: { "Authorization": token }
     });
+
     if (!res.ok) {
       alert("Admin session expired.");
       localStorage.removeItem("adminToken");
       window.location.href = "/admin-login.html";
       return;
     }
+
     const data = await res.json();
     renderStatus(data.entriesOpen);
   }
@@ -212,43 +214,99 @@
       statusDiv.className = "status-bar status-open";
       statusDiv.innerHTML = `
         🟢 Public Entries Page is currently OPEN
-        <button onclick="setEntries(false)" style="background:#c62828;color:white;">Close Entries</button>
+        <button onclick="setEntries(false)" style="background:#c62828;color:white;">
+          Close Entries
+        </button>
       `;
     } else {
       statusDiv.className = "status-bar status-closed";
       statusDiv.innerHTML = `
         🔴 Public Entries Page is currently CLOSED
-        <button onclick="setEntries(true)" style="background:#2e7d32;color:white;">Open Entries</button>
+        <button onclick="setEntries(true)" style="background:#2e7d32;color:white;">
+          Open Entries
+        </button>
       `;
     }
   }
 
   async function setEntries(open) {
-    const confirmText = open ? "Open entries to the public?" : "Close entries? No new submissions will be allowed.";
+    const confirmText = open
+      ? "Open entries to the public?"
+      : "Close entries? No new submissions will be allowed.";
+
     if (!confirm(confirmText)) return;
+
     const res = await fetch("/api/admin/entry-status", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": token },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": token
+      },
       body: JSON.stringify({ entriesOpen: open })
     });
-    if (!res.ok) { alert("Failed to update entry status."); return; }
+
+    if (!res.ok) {
+      alert("Failed to update entry status.");
+      return;
+    }
+
     loadEntryStatus();
   }
 
+  async function exportCSV() {
+    if (!token) {
+      alert("Admin session expired. Please log in again.");
+      window.location.href = "/admin-login.html";
+      return;
+    }
+
+    const res = await fetch("/api/admin/export", {
+      headers: { "Authorization": token }
+    });
+
+    if (!res.ok) {
+      alert("Export failed.");
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "entries.csv";
+    document.body.appendChild(a);
+    a.click();
+
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  }
+
   async function resetSeason() {
-    const confirmText = "ARE YOU ABSOLUTELY SURE?\n\nThis will permanently delete ALL entries and scores.\n\nThis cannot be undone.";
+    const confirmText =
+      "ARE YOU ABSOLUTELY SURE?\n\n" +
+      "This will permanently delete ALL entries and scores.\n\n" +
+      "This cannot be undone.";
+
     if (!confirm(confirmText)) return;
+
     const res = await fetch("/api/admin/reset-season", {
       method: "POST",
       headers: { "Authorization": token }
     });
-    if (!res.ok) { alert("Reset failed."); return; }
+
+    if (!res.ok) {
+      alert("Reset failed.");
+      return;
+    }
+
     alert("Season reset complete.");
     window.location.reload();
   }
 
   loadEntryStatus();
 </script>
+
 
 </body>
 </html>
