@@ -14,16 +14,18 @@
   <style>
   body {
     font-family: Arial, sans-serif;
+    /* Changed opacity from 0.92 to 0.7 to make the image clearer */
     background:
       linear-gradient(
-        rgba(245,245,245,0.92),
-        rgba(245,245,245,0.92)
+        rgba(245,245,245,0.7), 
+        rgba(245,245,245,0.7)
       ),
       url("/dashboard_background.png") center / cover no-repeat fixed;
     padding: 30px;
     position: relative;
+    min-height: 100vh;
+    margin: 0;
   }
-
 
     h1 {
       text-align: center;
@@ -81,16 +83,17 @@
       border-radius: 6px;
       text-align: center;
       font-weight: bold;
+      background: rgba(255, 255, 255, 0.9); /* Added slight opacity for readability */
     }
 
     .status-open {
-      background: #e6f7ec;
+      background: rgba(230, 247, 236, 0.9);
       color: #1b5e20;
       border: 2px solid #2e7d32;
     }
 
     .status-closed {
-      background: #fdecea;
+      background: rgba(253, 236, 234, 0.9);
       color: #b71c1c;
       border: 2px solid #c62828;
     }
@@ -117,7 +120,7 @@
       border-radius: 6px;
       cursor: pointer;
       text-decoration: none;
-      box-sizing: border-box; /* Ensures padding doesn't break width */
+      box-sizing: border-box;
     }
 
     .btn.blue { background: #1976d2; }
@@ -184,7 +187,6 @@
 </div>
 
 <script>
-  /* [Your existing script remains exactly the same] */
   const token = localStorage.getItem("adminToken");
   const statusDiv = document.getElementById("entryStatus");
 
