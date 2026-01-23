@@ -19,21 +19,35 @@
     }
     h2 {
       text-align: center;
+      margin-bottom: 20px;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 20px;
       background: white;
     }
     th, td {
       border: 1px solid #ccc;
       padding: 8px;
-      vertical-align: top;
+      vertical-align: middle;
     }
     th {
       background: #f0f0f0;
       text-align: left;
+    }
+    td.center {
+      text-align: center;
+    }
+    input[type="checkbox"] {
+      transform: scale(1.2);
+      cursor: pointer;
+    }
+    textarea {
+      width: 100%;
+      min-height: 40px;
+      resize: vertical;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
     }
   </style>
 </head>
@@ -47,8 +61,8 @@
     <tr>
       <th>Entry Name</th>
       <th>Email</th>
-      <th>Total Score</th>
-      <th>Players</th>
+      <th class="center">Paid</th>
+      <th>Notes</th>
     </tr>
   </thead>
   <tbody id="entriesBody">
@@ -59,13 +73,12 @@
 <script>
   const token = localStorage.getItem("adminToken");
 
-fetch("/api/admin/entries", {
-  method: "GET",
-  headers: {
-    "Authorization": localStorage.getItem("adminToken")
-  }
-})
-
+  fetch("/api/admin/entries", {
+    method: "GET",
+    headers: {
+      "Authorization": token
+    }
+  })
     .then(res => {
       if (res.status === 403) {
         throw new Error("unauthorized");
@@ -83,26 +96,56 @@ fetch("/api/admin/entries", {
       }
 
       entries.forEach(e => {
-        const playersList = e.players
-          .map(p => `${p.position} – ${p.player_name}`)
-          .join("<br>");
-
         const row = document.createElement("tr");
+
         row.innerHTML = `
           <td>${e.entry_name}</td>
           <td>${e.email}</td>
-          <td>${Number(e.total_score).toFixed(2)}</td>
-          <td>${playersList}</td>
+          <td class="center">
+            <input
+              type="checkbox"
+              ${e.paid ? "checked" : ""}
+              onchange="togglePaid(${e.id}, this.checked)"
+            />
+          </td>
+          <td>
+            <textarea
+              placeholder="Notes…"
+              onblur="saveNotes(${e.id}, this.value)"
+            >${e.notes || ""}</textarea>
+          </td>
         `;
 
         tbody.appendChild(row);
       });
     })
-    .catch(err => {
+    .catch(() => {
       alert("Admin session expired. Please log in again.");
       localStorage.removeItem("adminToken");
       window.location.href = "/admin-login.html";
     });
+
+  async function togglePaid(entryId, paid) {
+    await fetch("/api/admin/entry-payment", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": token
+      },
+      body: JSON.stringify({ entryId, paid })
+    });
+  }
+
+  async function saveNotes(entryId, notes) {
+    await fetch("/api/admin/entry-notes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": token
+      },
+      body: JSON.stringify({ entryId, notes })
+    });
+  }
 </script>
 
 </body>
