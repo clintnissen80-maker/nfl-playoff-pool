@@ -21,6 +21,8 @@ db.prepare(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     entry_name TEXT NOT NULL,
     email TEXT NOT NULL,
+    paid INTEGER DEFAULT 0,
+    notes TEXT DEFAULT '',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `).run();
@@ -224,7 +226,7 @@ app.get('/api/leaderboard', (req, res) => {
 });
 
 // --------------------
-// Admin: entry lock status (Phase 4A)
+// Admin: entry lock status
 // --------------------
 app.get('/api/admin/entry-status', requireAdmin, (req, res) => {
   res.json(getSettings());
@@ -244,6 +246,40 @@ app.post('/api/admin/entry-status', requireAdmin, (req, res) => {
 });
 
 // --------------------
+// Admin: update payment status
+// --------------------
+app.post('/api/admin/entry-payment', requireAdmin, (req, res) => {
+  const { entryId, paid } = req.body;
+
+  if (typeof paid !== 'boolean') {
+    return res.status(400).json({ error: 'paid must be boolean' });
+  }
+
+  db.prepare(`
+    UPDATE entries
+    SET paid = ?
+    WHERE id = ?
+  `).run(paid ? 1 : 0, entryId);
+
+  res.json({ success: true });
+});
+
+// --------------------
+// Admin: update entry notes
+// --------------------
+app.post('/api/admin/entry-notes', requireAdmin, (req, res) => {
+  const { entryId, notes } = req.body;
+
+  db.prepare(`
+    UPDATE entries
+    SET notes = ?
+    WHERE id = ?
+  `).run(notes || '', entryId);
+
+  res.json({ success: true });
+});
+
+// --------------------
 // Admin: playoff teams
 // --------------------
 app.get('/api/admin/playoff-teams', requireAdmin, (req, res) => {
@@ -257,7 +293,8 @@ app.post('/api/admin/playoff-teams', requireAdmin, (req, res) => {
   if (!Array.isArray(teams) || teams.length !== 14) {
     return res.status(400).json({ error: 'Exactly 14 teams required' });
   }
-  fs.writeFileSync(file = '/var/data/playoff-teams.json',
+  fs.writeFileSync(
+    '/var/data/playoff-teams.json',
     JSON.stringify({ teams }, null, 2)
   );
   res.json({ success: true });
@@ -335,6 +372,8 @@ app.get('/api/admin/entries', requireAdmin, (req, res) => {
       e.id,
       e.entry_name,
       e.email,
+      e.paid,
+      e.notes,
       e.created_at,
       SUM(
         COALESCE(s.wildcard,0) +
@@ -442,21 +481,19 @@ app.post('/api/admin/reset-season', requireAdmin, (req, res) => {
 app.get('/api/admin/export', requireAdmin, (req, res) => {
   const rows = db.prepare(`
     SELECT
-      e.entry_name,
-      e.email,
-      e.created_at,
-      p.position,
-      p.player_name,
-      p.team
-    FROM entries e
-    JOIN entry_players p ON e.id = p.entry_id
-    ORDER BY e.created_at DESC, e.entry_name
+      entry_name,
+      email,
+      paid,
+      notes,
+      created_at
+    FROM entries
+    ORDER BY created_at DESC
   `).all();
 
-  let csv = 'Entry Name,Email,Created At,Position,Player Name,Team\n';
+  let csv = 'Entry Name,Email,Paid,Notes,Created At\n';
 
   rows.forEach(r => {
-    csv += `"${r.entry_name}","${r.email}","${r.created_at}","${r.position}","${r.player_name}","${r.team}"\n`;
+    csv += `"${r.entry_name}","${r.email}","${r.paid ? 'YES' : 'NO'}","${r.notes || ''}","${r.created_at}"\n`;
   });
 
   res.header('Content-Type', 'text/csv');
