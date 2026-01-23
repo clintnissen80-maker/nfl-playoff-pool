@@ -108,22 +108,30 @@
    ================================ */
 @media (max-width: 700px) {
 
-  /* Prevent absolute-position buttons from overlapping */
-  body {
-    padding-top: 15px;
-  }
-
-  /* Any absolute-position button containers */
-  div[style*="position: absolute"] {
+  /* Remove absolute positioning on mobile */
+  .top-left,
+  .top-right {
     position: static !important;
     width: 100%;
-    margin-bottom: 12px;
+    margin-bottom: 15px;
   }
 
-  /* Make all buttons full-width on mobile */
-  button,
-  .btn {
+  /* Center header spacing */
+  h1 {
+    margin-top: 10px;
+  }
+
+  /* Stack menu nicely */
+  .menu {
+    margin-top: 10px;
+  }
+
+  /* Make buttons full-width and readable */
+  .btn,
+  button {
     width: 100% !important;
+    font-size: 16px;
+    padding: 14px;
   }
 }
 
