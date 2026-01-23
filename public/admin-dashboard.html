@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- 🔐 Admin guard -->
   <script>
     if (!localStorage.getItem("adminToken")) {
       window.location.href = "/admin-login.html";
@@ -23,6 +22,20 @@
     h1 {
       text-align: center;
       margin-bottom: 10px;
+    }
+
+    /* ---------- MOBILE NOTE ---------- */
+    .mobile-note {
+      display: none; /* Hidden by default on Desktop */
+      max-width: 500px;
+      margin: 10px auto 15px auto;
+      padding: 12px;
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeeba;
+      border-radius: 6px;
+      font-size: 14px;
+      text-align: center;
     }
 
     /* ---------- TOP LEFT ---------- */
@@ -103,62 +116,60 @@
       max-width: 400px;
       margin: 0 auto;
     }
-/* ================================
-   MOBILE LAYOUT FIX (SAFE)
-   ================================ */
-@media (max-width: 700px) {
 
-  /* Hide top utility buttons on mobile */
-  .top-left,
-  .top-right {
-    display: none !important;
-  }
+    /* ================================
+       MOBILE LAYOUT FIX (SAFE)
+       ================================ */
+    @media (max-width: 700px) {
+      .mobile-note {
+        display: block; /* Show note on small screens */
+      }
 
-  /* Center header spacing */
-  h1 {
-    margin-top: 10px;
-  }
+      /* Hide top utility buttons on mobile */
+      .top-left,
+      .top-right {
+        display: none !important;
+      }
 
-  /* Stack menu nicely */
-  .menu {
-    margin-top: 10px;
-  }
+      /* Center header spacing */
+      h1 {
+        margin-top: 10px;
+      }
 
-  /* Make buttons full-width and readable */
-  .btn,
-  button {
-    width: 100% !important;
-    font-size: 16px;
-    padding: 14px;
-  }
-}
+      /* Stack menu nicely */
+      .menu {
+        margin-top: 10px;
+      }
 
+      /* Make buttons full-width and readable */
+      .btn,
+      button {
+        width: 100% !important;
+        font-size: 16px;
+        padding: 14px;
+      }
+    }
   </style>
 </head>
 
 <body>
 
-<!-- ---------- TOP LEFT ---------- -->
 <div class="top-left">
   <a class="btn blue" href="/leaderboard.html" target="_blank">
     📊 Public Leaderboard
   </a>
-
   <a class="btn blue" href="/">
     📝 Public Entry Page
   </a>
 </div>
 
-<!-- ---------- TOP RIGHT ---------- -->
 <div class="top-right">
   <button class="btn red" onclick="resetSeason()">
     🔴 Reset for New Season
   </button>
-
   <a class="btn green" href="/admin-playoff-setup.html">
     🏈 Setup Playoff Teams
   </a>
-
   <a class="btn green" href="/admin-player-builder.html">
     🧩 Build Player Pool
   </a>
@@ -166,23 +177,23 @@
 
 <h1>Admin Dashboard</h1>
 
-<!-- ---------- ENTRY STATUS ---------- -->
+<div class="mobile-note">
+  ⚠️ <strong>Limited admin tools on mobile</strong><br>
+  For season setup, player pool changes, or resets, please use a laptop or desktop.
+</div>
+
 <div id="entryStatus" class="status-bar">Loading entry status…</div>
 
-<!-- ---------- MAIN MENU ---------- -->
 <div class="menu">
   <a class="btn green" href="/admin-scores.html">
     Enter Player Scores
   </a>
-
   <a class="btn blue" href="/admin-entries.html">
     View All Entries
   </a>
-
   <a class="btn blue" href="/admin.html">
     Admin Leaderboard
   </a>
-
   <a class="btn gray" href="/api/admin/export">
     Export Entries (CSV)
   </a>
