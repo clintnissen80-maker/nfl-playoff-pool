@@ -26,7 +26,7 @@
 
     /* ---------- MOBILE NOTE ---------- */
     .mobile-note {
-      display: none; /* Hidden by default on Desktop */
+      display: none; 
       max-width: 500px;
       margin: 10px auto 15px auto;
       padding: 12px;
@@ -38,33 +38,33 @@
       text-align: center;
     }
 
-    /* ---------- TOP LEFT ---------- */
+    /* ---------- TOP UTILITY BUTTONS (Desktop) ---------- */
     .top-left {
       position: absolute;
       top: 15px;
-      left: 20px; /* Increased slightly for better breathing room */
+      left: 20px;
       display: flex;
       flex-direction: column;
       gap: 10px;
-      width: 200px; /* Set a standard width */
+      width: 200px;
     }
 
-    /* ---------- TOP RIGHT ---------- */
     .top-right {
       position: absolute;
       top: 15px;
-      right: 20px; /* Increased from 15px to 20px to fix the 'edge' issue */
+      right: 20px;
       display: flex;
       flex-direction: column;
       gap: 10px;
-      width: 220px; /* Set a standard width so long text doesn't push it to the edge */
+      width: 220px;
     }
 
-    /* Adjust the specific buttons in the corners to be slightly smaller/cleaner */
-    .top-left .btn, .top-right .btn {
+    /* Smaller styling for corner buttons */
+    .top-left .btn, 
+    .top-right .btn {
       padding: 10px 12px;
       font-size: 14px;
-      margin-bottom: 0; /* Remove bottom margin since 'gap' handles it */
+      margin-bottom: 0;
     }
 
     /* ---------- STATUS BAR ---------- */
@@ -98,6 +98,7 @@
       cursor: pointer;
     }
 
+    /* ---------- GENERAL BUTTONS ---------- */
     .btn {
       display: block;
       width: 100%;
@@ -110,6 +111,7 @@
       border-radius: 6px;
       cursor: pointer;
       text-decoration: none;
+      box-sizing: border-box; /* Ensures padding doesn't break width */
     }
 
     .btn.blue { background: #1976d2; }
@@ -117,9 +119,7 @@
     .btn.red { background: #c62828; }
     .btn.gray { background: #6c757d; }
 
-    .btn:hover {
-      opacity: 0.9;
-    }
+    .btn:hover { opacity: 0.9; }
 
     .menu {
       max-width: 400px;
@@ -127,32 +127,19 @@
     }
 
     /* ================================
-       MOBILE LAYOUT FIX (SAFE)
+       MOBILE LAYOUT FIX
        ================================ */
     @media (max-width: 700px) {
-      .mobile-note {
-        display: block; /* Show note on small screens */
-      }
+      .mobile-note { display: block; }
 
-      /* Hide top utility buttons on mobile */
-      .top-left,
-      .top-right {
+      .top-left, .top-right {
         display: none !important;
       }
 
-      /* Center header spacing */
-      h1 {
-        margin-top: 10px;
-      }
+      h1 { margin-top: 10px; }
+      .menu { margin-top: 10px; }
 
-      /* Stack menu nicely */
-      .menu {
-        margin-top: 10px;
-      }
-
-      /* Make buttons full-width and readable */
-      .btn,
-      button {
+      .btn, button {
         width: 100% !important;
         font-size: 16px;
         padding: 14px;
@@ -164,24 +151,14 @@
 <body>
 
 <div class="top-left">
-  <a class="btn blue" href="/leaderboard.html" target="_blank">
-    📊 Public Leaderboard
-  </a>
-  <a class="btn blue" href="/">
-    📝 Public Entry Page
-  </a>
+  <a class="btn blue" href="/leaderboard.html" target="_blank">📊 Public Leaderboard</a>
+  <a class="btn blue" href="/">📝 Public Entry Page</a>
 </div>
 
 <div class="top-right">
-  <button class="btn red" onclick="resetSeason()">
-    🔴 Reset for New Season
-  </button>
-  <a class="btn green" href="/admin-playoff-setup.html">
-    🏈 Setup Playoff Teams
-  </a>
-  <a class="btn green" href="/admin-player-builder.html">
-    🧩 Build Player Pool
-  </a>
+  <button class="btn red" onclick="resetSeason()">🔴 Reset for New Season</button>
+  <a class="btn green" href="/admin-playoff-setup.html">🏈 Setup Playoff Teams</a>
+  <a class="btn green" href="/admin-player-builder.html">🧩 Build Player Pool</a>
 </div>
 
 <h1>Admin Dashboard</h1>
@@ -194,21 +171,14 @@
 <div id="entryStatus" class="status-bar">Loading entry status…</div>
 
 <div class="menu">
-  <a class="btn green" href="/admin-scores.html">
-    Enter Player Scores
-  </a>
-  <a class="btn blue" href="/admin-entries.html">
-    View All Entries
-  </a>
-  <a class="btn blue" href="/admin.html">
-    Admin Leaderboard
-  </a>
-  <a class="btn gray" href="/api/admin/export">
-    Export Entries (CSV)
-  </a>
+  <a class="btn green" href="/admin-scores.html">Enter Player Scores</a>
+  <a class="btn blue" href="/admin-entries.html">View All Entries</a>
+  <a class="btn blue" href="/admin.html">Admin Leaderboard</a>
+  <a class="btn gray" href="/api/admin/export">Export Entries (CSV)</a>
 </div>
 
 <script>
+  /* [Your existing script remains exactly the same] */
   const token = localStorage.getItem("adminToken");
   const statusDiv = document.getElementById("entryStatus");
 
@@ -216,14 +186,12 @@
     const res = await fetch("/api/admin/entry-status", {
       headers: { "Authorization": token }
     });
-
     if (!res.ok) {
       alert("Admin session expired.");
       localStorage.removeItem("adminToken");
       window.location.href = "/admin-login.html";
       return;
     }
-
     const data = await res.json();
     renderStatus(data.entriesOpen);
   }
@@ -233,63 +201,37 @@
       statusDiv.className = "status-bar status-open";
       statusDiv.innerHTML = `
         🟢 Public Entries Page is currently OPEN
-        <button onclick="setEntries(false)" style="background:#c62828;color:white;">
-          Close Entries
-        </button>
+        <button onclick="setEntries(false)" style="background:#c62828;color:white;">Close Entries</button>
       `;
     } else {
       statusDiv.className = "status-bar status-closed";
       statusDiv.innerHTML = `
         🔴 Public Entries Page is currently CLOSED
-        <button onclick="setEntries(true)" style="background:#2e7d32;color:white;">
-          Open Entries
-        </button>
+        <button onclick="setEntries(true)" style="background:#2e7d32;color:white;">Open Entries</button>
       `;
     }
   }
 
   async function setEntries(open) {
-    const confirmText = open
-      ? "Open entries to the public?"
-      : "Close entries? No new submissions will be allowed.";
-
+    const confirmText = open ? "Open entries to the public?" : "Close entries? No new submissions will be allowed.";
     if (!confirm(confirmText)) return;
-
     const res = await fetch("/api/admin/entry-status", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": token
-      },
+      headers: { "Content-Type": "application/json", "Authorization": token },
       body: JSON.stringify({ entriesOpen: open })
     });
-
-    if (!res.ok) {
-      alert("Failed to update entry status.");
-      return;
-    }
-
+    if (!res.ok) { alert("Failed to update entry status."); return; }
     loadEntryStatus();
   }
 
   async function resetSeason() {
-    const confirmText =
-      "ARE YOU ABSOLUTELY SURE?\n\n" +
-      "This will permanently delete ALL entries and scores.\n\n" +
-      "This cannot be undone.";
-
+    const confirmText = "ARE YOU ABSOLUTELY SURE?\n\nThis will permanently delete ALL entries and scores.\n\nThis cannot be undone.";
     if (!confirm(confirmText)) return;
-
     const res = await fetch("/api/admin/reset-season", {
       method: "POST",
       headers: { "Authorization": token }
     });
-
-    if (!res.ok) {
-      alert("Reset failed.");
-      return;
-    }
-
+    if (!res.ok) { alert("Reset failed."); return; }
     alert("Season reset complete.");
     window.location.reload();
   }
