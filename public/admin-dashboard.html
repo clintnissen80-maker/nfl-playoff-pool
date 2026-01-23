@@ -42,20 +42,29 @@
     .top-left {
       position: absolute;
       top: 15px;
-      left: 15px;
+      left: 20px; /* Increased slightly for better breathing room */
       display: flex;
       flex-direction: column;
       gap: 10px;
+      width: 200px; /* Set a standard width */
     }
 
     /* ---------- TOP RIGHT ---------- */
     .top-right {
       position: absolute;
       top: 15px;
-      right: 15px;
+      right: 20px; /* Increased from 15px to 20px to fix the 'edge' issue */
       display: flex;
       flex-direction: column;
       gap: 10px;
+      width: 220px; /* Set a standard width so long text doesn't push it to the edge */
+    }
+
+    /* Adjust the specific buttons in the corners to be slightly smaller/cleaner */
+    .top-left .btn, .top-right .btn {
+      padding: 10px 12px;
+      font-size: 14px;
+      margin-bottom: 0; /* Remove bottom margin since 'gap' handles it */
     }
 
     /* ---------- STATUS BAR ---------- */
