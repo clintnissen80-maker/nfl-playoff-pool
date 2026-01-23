@@ -335,12 +335,47 @@ app.get('/api/admin/player-pool', requireAdmin, (req, res) => {
 });
 
 app.post('/api/admin/player-pool', requireAdmin, (req, res) => {
+  // 1️⃣ Save player pool
   fs.writeFileSync(
     '/var/data/player-pool.json',
     JSON.stringify(req.body.pool, null, 2)
   );
-  res.json({ success: true });
+
+  // 2️⃣ Regenerate players.csv automatically
+  const teams = JSON.parse(
+    fs.readFileSync('/var/data/playoff-teams.json')
+  ).teams;
+
+  const pool = JSON.parse(
+    fs.readFileSync('/var/data/player-pool.json')
+  );
+
+  const rows = ['PlayerID,PlayerName,Position,TeamID'];
+
+  function add(pos, team, name) {
+    const clean = name.replace(/[^a-zA-Z0-9]/g, '');
+    rows.push(`${pos}_${team}_${clean},${name},${pos},${team}`);
+  }
+
+  ['QB','RB','WR','TE'].forEach(pos => {
+    if (!pool[pos]) return;
+    Object.keys(pool[pos]).forEach(team => {
+      pool[pos][team].forEach(p => add(pos, team, p.name));
+    });
+  });
+
+  teams.forEach(team => add('K', team, `${team}K`));
+
+  fs.writeFileSync(
+    path.join(__dirname, 'players.csv'),
+    rows.join('\n'),
+    'utf8'
+  );
+
+  // 3️⃣ Done
+  res.json({ success: true, regenerated: true });
 });
+
 
 // --------------------
 // Admin: generate players.csv
