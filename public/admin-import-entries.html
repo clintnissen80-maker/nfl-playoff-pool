@@ -117,17 +117,13 @@ playerHeaders.forEach((header, i) => {
   const name = (r[header] || "").trim();
   if (!name) return;
 
-  const team = name.slice(-3);
-
   players.push({
     player_name: name,
-    team,
-    position: positions[i],
-    player_id: `${positions[i]}_${team}_${name.replace(/[^a-zA-Z0-9]/g, "")}`
+    position: positions[i]
+    // ⚠️ NO team
+    // ⚠️ NO player_id
   });
 });
-
-
       return {
         entry_name: r["Entry name"],
         email: r["Email"],
