@@ -106,6 +106,42 @@ function requireAdmin(req, res, next) {
     res.status(403).json({ error: "Invalid token" });
   }
 }
+function regeneratePlayersCSV() {
+  const teamsFile = '/var/data/playoff-teams.json';
+  const poolFile = '/var/data/player-pool.json';
+
+  if (!fs.existsSync(teamsFile) || !fs.existsSync(poolFile)) {
+    console.log('⚠️ Skipping players.csv generation (missing data)');
+    return;
+  }
+
+  const teams = JSON.parse(fs.readFileSync(teamsFile)).teams;
+  const pool = JSON.parse(fs.readFileSync(poolFile));
+
+  const rows = ['PlayerID,PlayerName,Position,TeamID'];
+
+  function add(pos, team, name) {
+    const clean = name.replace(/[^a-zA-Z0-9]/g, '');
+    rows.push(`${pos}_${team}_${clean},${name},${pos},${team}`);
+  }
+
+  ['QB','RB','WR','TE'].forEach(pos => {
+    if (!pool[pos]) return;
+    Object.keys(pool[pos]).forEach(team => {
+      pool[pos][team].forEach(p => add(pos, team, p.name));
+    });
+  });
+
+  teams.forEach(team => add('K', team, `${team}K`));
+
+  fs.writeFileSync(
+    path.join(__dirname, 'players.csv'),
+    rows.join('\n'),
+    'utf8'
+  );
+
+  console.log(`✅ players.csv regenerated (${rows.length - 1} players)`);
+}
 
 // --------------------
 // Admin login
@@ -583,6 +619,8 @@ app.get('/api/admin/export', requireAdmin, (req, res) => {
 // --------------------
 // Start server
 // --------------------
+regeneratePlayersCSV();
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
