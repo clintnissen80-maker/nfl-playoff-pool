@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NFL Playoff Pool</title>
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -11,6 +12,7 @@
       padding: 20px;
       background: #f5f5f5;
     }
+
     .container {
       max-width: 480px;
       margin: 0 auto;
@@ -18,20 +20,24 @@
       padding: 20px;
       border-radius: 8px;
     }
+
     h1 {
       text-align: center;
     }
+
     label {
       display: block;
       margin-top: 15px;
       font-weight: bold;
     }
+
     input {
       width: 100%;
       padding: 10px;
       margin-top: 5px;
       font-size: 16px;
     }
+
     button {
       margin-top: 25px;
       width: 100%;
@@ -43,49 +49,95 @@
       border-radius: 4px;
       opacity: 0.5;
     }
+
     button.enabled {
       opacity: 1;
       cursor: pointer;
     }
+
+    /* CLOSED MESSAGE */
+    #entriesClosedMsg {
+      display: none;
+      background: #fdecea;
+      color: #b71c1c;
+      border: 1px solid #c62828;
+      padding: 12px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+      font-weight: bold;
+      text-align: center;
+    }
   </style>
 </head>
+
 <body>
-  <div class="container">
-    <h1>NFL Playoff Pool</h1>
 
-    <label for="entryName">Entry Name</label>
-    <input id="entryName" type="text" placeholder="My Entry 1" />
+<div id="entriesClosedMsg">
+  🚫 Entries are currently closed.<br>
+  Please check back later.
+</div>
 
-    <label for="email">Email</label>
-    <input id="email" type="email" placeholder="you@email.com" />
+<div class="container">
+  <h1>NFL Playoff Pool</h1>
 
-    <button id="continueBtn" disabled onclick="goNext()">Continue</button>
+  <label for="entryName">Entry Name</label>
+  <input id="entryName" type="text" placeholder="My Entry 1" />
 
-  </div>
+  <label for="email">Email</label>
+  <input id="email" type="email" placeholder="you@email.com" />
 
-  <script>
-    const entryNameInput = document.getElementById('entryName');
-    const emailInput = document.getElementById('email');
-    const continueBtn = document.getElementById('continueBtn');
+  <button id="continueBtn" disabled onclick="goNext()">Continue</button>
+</div>
 
-    function checkInputs() {
-      if (entryNameInput.value.trim() && emailInput.value.trim()) {
-        continueBtn.disabled = false;
-        continueBtn.classList.add('enabled');
-      } else {
-        continueBtn.disabled = true;
-        continueBtn.classList.remove('enabled');
-      }
+<script>
+  const entryNameInput = document.getElementById("entryName");
+  const emailInput = document.getElementById("email");
+  const continueBtn = document.getElementById("continueBtn");
+  const closedMsg = document.getElementById("entriesClosedMsg");
+
+  // Enable / disable Continue button
+  function checkInputs() {
+    if (entryNameInput.value.trim() && emailInput.value.trim()) {
+      continueBtn.disabled = false;
+      continueBtn.classList.add("enabled");
+    } else {
+      continueBtn.disabled = true;
+      continueBtn.classList.remove("enabled");
     }
-function goNext() {
-  sessionStorage.setItem('entryName', entryNameInput.value.trim());
-  sessionStorage.setItem('email', emailInput.value.trim());
-  window.location.href = "select.html";
-}
+  }
 
+  entryNameInput.addEventListener("input", checkInputs);
+  emailInput.addEventListener("input", checkInputs);
 
-    entryNameInput.addEventListener('input', checkInputs);
-    emailInput.addEventListener('input', checkInputs);
-  </script>
+  function goNext() {
+    sessionStorage.setItem("entryName", entryNameInput.value.trim());
+    sessionStorage.setItem("email", emailInput.value.trim());
+    window.location.href = "select.html";
+  }
+
+  // 🔒 Check if entries are open (PUBLIC SAFE)
+  async function checkEntryStatus() {
+    try {
+      const res = await fetch("/api/entry-status");
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      if (!data.entriesOpen) {
+        closedMsg.style.display = "block";
+
+        entryNameInput.disabled = true;
+        emailInput.disabled = true;
+        continueBtn.disabled = true;
+        continueBtn.classList.remove("enabled");
+      }
+    } catch (err) {
+      // If something goes wrong, server still blocks submission
+    }
+  }
+
+  checkEntryStatus();
+</script>
+
 </body>
 </html>

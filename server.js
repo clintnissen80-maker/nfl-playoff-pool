@@ -278,6 +278,13 @@ app.get('/api/leaderboard', (req, res) => {
 });
 
 // --------------------
+// PUBLIC: entry lock status (read-only)
+// --------------------
+app.get('/api/entry-status', (req, res) => {
+  res.json(getSettings());
+});
+
+// --------------------
 // Admin: entry lock status
 // --------------------
 app.get('/api/admin/entry-status', requireAdmin, (req, res) => {
