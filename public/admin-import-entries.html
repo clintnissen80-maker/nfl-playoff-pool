@@ -64,7 +64,7 @@
     Scores will remain intact.
   </div>
 
-  <input type="file" id="fileInput" accept=".csv" />
+  <input type="file" id="fileInput" accept=".csv,.tsv" />
 
   <button onclick="importCSV()">IMPORT ENTRIES</button>
 </div>
@@ -77,7 +77,9 @@
     return lines.map(line => {
       const cols = line.split("\t");
       const row = {};
-      headers.forEach((h, i) => row[h.trim()] = cols[i]?.trim());
+      headers.forEach((h, i) => {
+        row[h.trim()] = (cols[i] || "").trim();
+      });
       return row;
     });
   }
@@ -95,24 +97,35 @@
     const rows = raw.map(r => {
       const players = [];
 
-      // QB1 → QB3
-      ["QB","QB","QB","RB","RB","RB","WR","WR","WR","TE","TE","K","K","K"]
-        .forEach((pos, i) => {
-          const name = r[Object.keys(r)[2 + i]];
-          const team = name.slice(-3);
-          players.push({
-            player_name: name,
-            team,
-            position: pos,
-            player_id: `${pos}_${team}_${name.replace(/[^a-zA-Z0-9]/g, '')}`
-          });
+      const playerColumns = [
+        "QB","QB","QB",
+        "RB","RB","RB",
+        "WR","WR","WR",
+        "TE","TE",
+        "K","K","K"
+      ];
+
+      playerColumns.forEach((pos, i) => {
+        const key = Object.keys(r)[2 + i];
+        const name = (r[key] || "").trim();
+
+        if (!name) return;
+
+        const team = name.slice(-3);
+
+        players.push({
+          player_name: name,
+          team,
+          position: pos,
+          player_id: `${pos}_${team}_${name.replace(/[^a-zA-Z0-9]/g, "")}`
         });
+      });
 
       return {
         entry_name: r["Entry name"],
         email: r["Email"],
         paid: r["Paid"] === "Yes",
-        notes: r["Notes"],
+        notes: r["Notes"] || "",
         players
       };
     });
