@@ -593,74 +593,90 @@ app.post('/api/admin/reset-season', requireAdmin, (req, res) => {
 });
 
 // --------------------
-// Admin: bulk import entries from CSV
+// Admin: bulk import entries from CSV (SAFE DEBUG VERSION)
 // --------------------
 app.post('/api/admin/import-entries', requireAdmin, (req, res) => {
-  const { rows } = req.body;
+  try {
+    const { rows } = req.body;
 
-  if (!Array.isArray(rows) || !rows.length) {
-    return res.status(400).json({ error: 'No rows provided' });
-  }
+    if (!Array.isArray(rows) || !rows.length) {
+      return res.status(400).json({ error: 'No rows provided' });
+    }
 
-  // Wipe existing entries (safe — scores remain valid)
-  db.prepare('DELETE FROM entry_players').run();
-  db.prepare('DELETE FROM entries').run();
+    // Wipe existing entries
+    db.prepare('DELETE FROM entry_players').run();
+    db.prepare('DELETE FROM entries').run();
 
-  const insertEntry = db.prepare(`
-    INSERT INTO entries (entry_name, email, paid, notes)
-    VALUES (?, ?, ?, ?)
-  `);
+    const insertEntry = db.prepare(`
+      INSERT INTO entries (entry_name, email, paid, notes)
+      VALUES (?, ?, ?, ?)
+    `);
 
-  const insertPlayer = db.prepare(`
-    INSERT INTO entry_players
-    (entry_id, player_id, player_name, position, team)
-    VALUES (?, ?, ?, ?, ?)
-  `);
+    const insertPlayer = db.prepare(`
+      INSERT INTO entry_players
+      (entry_id, player_id, player_name, position, team)
+      VALUES (?, ?, ?, ?, ?)
+    `);
 
-  const tx = db.transaction(() => {
-    rows.forEach(row => {
-      const {
-        entry_name,
-        email,
-        paid,
-        notes,
-        players
-      } = row;
+    const errors = [];
 
-      const result = insertEntry.run(
-        entry_name,
-        email,
-        paid ? 1 : 0,
-        notes || ''
-      );
+    const tx = db.transaction(() => {
+      rows.forEach((row, index) => {
+        const { entry_name, email, paid, notes, players } = row;
 
-      const entryId = result.lastInsertRowid;
-if (!Array.isArray(players) || players.length !== 14) {
-  throw new Error(
-    `Invalid player count for entry "${entry_name}". Found ${players?.length || 0}`
-  );
-}
+        if (!entry_name || !email) {
+          errors.push(`Row ${index + 1}: missing entry name or email`);
+          return;
+        }
 
-players.forEach(p => {
-  if (!p.player_id || !p.player_name || !p.position || !p.team) {
-    throw new Error(`Invalid player data for entry "${entry_name}"`);
-  }
+        if (!Array.isArray(players) || players.length !== 14) {
+          errors.push(
+            `Row ${index + 1} (${entry_name}): expected 14 players, got ${players?.length || 0}`
+          );
+          return;
+        }
 
-  insertPlayer.run(
-    entryId,
-    p.player_id,
-    p.player_name,
-    p.position,
-    p.team
-  );
-});
-     
+        const result = insertEntry.run(
+          entry_name,
+          email,
+          paid ? 1 : 0,
+          notes || ''
+        );
+
+        const entryId = result.lastInsertRowid;
+
+        players.forEach(p => {
+          if (!p.player_id || !p.player_name || !p.position || !p.team) {
+            errors.push(`Row ${index + 1} (${entry_name}): invalid player data`);
+            return;
+          }
+
+          insertPlayer.run(
+            entryId,
+            p.player_id,
+            p.player_name,
+            p.position,
+            p.team
+          );
+        });
+      });
     });
-  });
 
-  tx();
+    tx();
 
-  res.json({ success: true, imported: rows.length });
+    if (errors.length) {
+      console.error("IMPORT WARNINGS:", errors);
+      return res.status(400).json({
+        error: "Import completed with errors",
+        details: errors.slice(0, 10) // don’t spam
+      });
+    }
+
+    res.json({ success: true, imported: rows.length });
+  } catch (err) {
+    console.error("IMPORT FAILED:", err);
+    res.status(500).json({ error: "Server error during import" });
+  }
 });
 
 // --------------------
