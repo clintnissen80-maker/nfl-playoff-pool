@@ -140,9 +140,12 @@
     });
 
     if (!res.ok) {
-      alert("Import failed.");
-      return;
-    }
+  const err = await res.json();
+  console.error(err);
+  alert("Import failed:\n" + JSON.stringify(err, null, 2));
+  return;
+}
+
 
     alert("Import complete!");
     window.location.href = "/admin-entries.html";
