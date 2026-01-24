@@ -369,13 +369,8 @@ app.post('/api/admin/reset-playoff-setup', requireAdmin, (req, res) => {
   if (fs.existsSync(poolFile)) {
     fs.unlinkSync(poolFile);
   }
-
-  // Reset players.csv to header only
-  fs.writeFileSync(
-    csvFile,
-    'PlayerID,PlayerName,Position,TeamID\n',
-    'utf8'
-  );
+  // Regenerate players.csv from clean state
+  regeneratePlayersCSV();
 
   res.json({ success: true });
 });
