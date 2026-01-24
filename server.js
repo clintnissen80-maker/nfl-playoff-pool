@@ -635,16 +635,26 @@ app.post('/api/admin/import-entries', requireAdmin, (req, res) => {
       );
 
       const entryId = result.lastInsertRowid;
+if (!Array.isArray(players) || players.length !== 14) {
+  throw new Error(
+    `Invalid player count for entry "${entry_name}". Found ${players?.length || 0}`
+  );
+}
 
-      players.forEach(p => {
-        insertPlayer.run(
-          entryId,
-          p.player_id,
-          p.player_name,
-          p.position,
-          p.team
-        );
-      });
+players.forEach(p => {
+  if (!p.player_id || !p.player_name || !p.position || !p.team) {
+    throw new Error(`Invalid player data for entry "${entry_name}"`);
+  }
+
+  insertPlayer.run(
+    entryId,
+    p.player_id,
+    p.player_name,
+    p.position,
+    p.team
+  );
+});
+     
     });
   });
 
