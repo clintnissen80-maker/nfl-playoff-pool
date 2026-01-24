@@ -71,18 +71,18 @@
 
 <script>
   function parseCSV(text) {
-    const lines = text.trim().split("\n");
-    const headers = lines.shift().split("\t");
+  const lines = text.trim().split("\n");
+  const headers = lines.shift().split(",");
 
-    return lines.map(line => {
-      const cols = line.split("\t");
-      const row = {};
-      headers.forEach((h, i) => {
-        row[h.trim()] = (cols[i] || "").trim();
-      });
-      return row;
+  return lines.map(line => {
+    const cols = line.split(",");
+    const row = {};
+    headers.forEach((h, i) => {
+      row[h.trim()] = (cols[i] || "").trim();
     });
-  }
+    return row;
+  });
+}
 
   async function importCSV() {
     const file = document.getElementById("fileInput").files[0];
