@@ -95,31 +95,38 @@
     const raw = parseCSV(text);
 
     const rows = raw.map(r => {
-      const players = [];
+    const players = [];
 
-      const playerColumns = [
-        "QB","QB","QB",
-        "RB","RB","RB",
-        "WR","WR","WR",
-        "TE","TE",
-        "K","K","K"
-      ];
+    const playerHeaders = [
+  "QB1","QB2","QB3",
+  "RB1","RB2","RB3",
+  "WR1","WR2","WR3",
+  "TE1","TE2",
+  "K1","K2","K3"
+];
 
-      playerColumns.forEach((pos, i) => {
-        const key = Object.keys(r)[2 + i];
-        const name = (r[key] || "").trim();
+const positions = [
+  "QB","QB","QB",
+  "RB","RB","RB",
+  "WR","WR","WR",
+  "TE","TE",
+  "K","K","K"
+];
 
-        if (!name) return;
+playerHeaders.forEach((header, i) => {
+  const name = (r[header] || "").trim();
+  if (!name) return;
 
-        const team = name.slice(-3);
+  const team = name.slice(-3);
 
-        players.push({
-          player_name: name,
-          team,
-          position: pos,
-          player_id: `${pos}_${team}_${name.replace(/[^a-zA-Z0-9]/g, "")}`
-        });
-      });
+  players.push({
+    player_name: name,
+    team,
+    position: positions[i],
+    player_id: `${positions[i]}_${team}_${name.replace(/[^a-zA-Z0-9]/g, "")}`
+  });
+});
+
 
       return {
         entry_name: r["Entry name"],
