@@ -207,7 +207,8 @@
         container.appendChild(row);
       });
     });
-  }
+    applyLocksOnLoad();
+}
 
   function updateTotal(row) {
     const total =
@@ -252,7 +253,9 @@
 
     alert('Scores saved successfully');
   });
-const lockedColumns = {
+const lockedColumns = JSON.parse(
+  localStorage.getItem("lockedColumns")
+) || {
   wildcard: false,
   divisional: false,
   conference: false,
@@ -262,18 +265,38 @@ const lockedColumns = {
 function toggleLock(field) {
   lockedColumns[field] = !lockedColumns[field];
 
+  // Save lock state
+  localStorage.setItem("lockedColumns", JSON.stringify(lockedColumns));
+
   document.querySelectorAll(`input[data-field="${field}"]`)
     .forEach(input => {
       input.disabled = lockedColumns[field];
       input.classList.toggle("locked", lockedColumns[field]);
     });
 
-  // Update button label
   document
     .querySelectorAll(`button[onclick="toggleLock('${field}')"]`)
     .forEach(btn => {
       btn.textContent = lockedColumns[field] ? "🔓 Unlock" : "🔒 Lock";
     });
+}
+function applyLocksOnLoad() {
+  Object.keys(lockedColumns).forEach(field => {
+    if (lockedColumns[field]) {
+      document
+        .querySelectorAll(`input[data-field="${field}"]`)
+        .forEach(input => {
+          input.disabled = true;
+          input.classList.add("locked");
+        });
+
+      document
+        .querySelectorAll(`button[onclick="toggleLock('${field}')"]`)
+        .forEach(btn => {
+          btn.textContent = "🔓 Unlock";
+        });
+    }
+  });
 }
 
 </script>
