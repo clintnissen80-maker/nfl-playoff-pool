@@ -22,6 +22,7 @@
       background: white;
       padding: 25px;
       border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
     h1 {
       text-align: center;
@@ -40,6 +41,9 @@
       border: none;
       border-radius: 4px;
       cursor: pointer;
+    }
+    button:hover {
+      background: #b71c1c;
     }
     .warn {
       background: #fdecea;
@@ -66,92 +70,119 @@
 
   <input type="file" id="fileInput" accept=".csv,.tsv" />
 
-  <button onclick="importCSV()">IMPORT ENTRIES</button>
+  <button id="importBtn" onclick="importCSV()">IMPORT ENTRIES</button>
 </div>
 
 <script>
+  /**
+   * Cleans up the CSV text and converts it into an array of objects
+   */
   function parseCSV(text) {
-  const lines = text.trim().split("\n");
-  const headers = lines.shift().split(",");
+    const lines = text.split(/\r?\n/).filter(line => line.trim() !== "");
+    if (lines.length === 0) return [];
 
-  return lines.map(line => {
-    const cols = line.split(",");
-    const row = {};
-    headers.forEach((h, i) => {
-      row[h.trim()] = (cols[i] || "").trim();
+    const headers = lines.shift().split(",").map(h => h.trim());
+
+    return lines.map(line => {
+      const cols = line.split(",");
+      const row = {};
+      headers.forEach((h, i) => {
+        row[h] = (cols[i] || "").trim();
+      });
+      return row;
     });
-    return row;
-  });
-}
+  }
 
   async function importCSV() {
-    const file = document.getElementById("fileInput").files[0];
+    const fileInput = document.getElementById("fileInput");
+    const btn = document.getElementById("importBtn");
+    const file = fileInput.files[0];
+
     if (!file) {
       alert("Select a CSV file first.");
       return;
     }
 
-    const text = await file.text();
-    const raw = parseCSV(text);
+    // Disable button to prevent double-clicking
+    btn.disabled = true;
+    btn.textContent = "Processing...";
 
-    const rows = raw.map(r => {
-    const players = [];
+    try {
+      const text = await file.text();
+      const raw = parseCSV(text);
 
-    const playerHeaders = [
-  "QB1","QB2","QB3",
-  "RB1","RB2","RB3",
-  "WR1","WR2","WR3",
-  "TE1","TE2",
-  "K1","K2","K3"
-];
+      const rows = raw.map((r, index) => {
+        const players = [];
+        const playerHeaders = [
+          "QB1","QB2","QB3",
+          "RB1","RB2","RB3",
+          "WR1","WR2","WR3",
+          "TE1","TE2",
+          "K1","K2","K3"
+        ];
 
-const positions = [
-  "QB","QB","QB",
-  "RB","RB","RB",
-  "WR","WR","WR",
-  "TE","TE",
-  "K","K","K"
-];
+        const positions = [
+          "QB","QB","QB",
+          "RB","RB","RB",
+          "WR","WR","WR",
+          "TE","TE",
+          "K","K","K"
+        ];
 
-playerHeaders.forEach((header, i) => {
-  const name = (r[header] || "").trim();
-  if (!name) return;
+        playerHeaders.forEach((header, i) => {
+          const cellValue = r[header];
+          if (!cellValue) return;
 
-  players.push({
-    player_name: name,
-    position: positions[i]
-    // ⚠️ NO team
-    // ⚠️ NO player_id
-  });
-});
-      return {
-        entry_name: r["Entry name"],
-        email: r["Email"],
-        paid: r["Paid"] === "Yes",
-        notes: r["Notes"] || "",
-        players
-      };
-    });
+          // Expect format: Player Name|TEAM
+          const parts = cellValue.split("|");
 
-    const res = await fetch("/api/admin/import-entries", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": localStorage.getItem("adminToken")
-      },
-      body: JSON.stringify({ rows })
-    });
+          if (parts.length < 2) {
+            throw new Error(
+              `Row ${index + 2}: Invalid format for ${header} ("${cellValue}"). \n\nExpected: Player Name|TEAM`
+            );
+          }
 
-    if (!res.ok) {
-  const err = await res.json();
-  console.error(err);
-  alert("Import failed:\n" + JSON.stringify(err, null, 2));
-  return;
-}
+          players.push({
+            player_name: parts[0].trim(),
+            team: parts[1].trim(),
+            position: positions[i]
+          });
+        });
 
+        return {
+          entry_name: r["Entry name"],
+          email: r["Email"],
+          paid: r["Paid"] === "Yes",
+          notes: r["Notes"] || "",
+          players
+        };
+      });
 
-    alert("Import complete!");
-    window.location.href = "/admin-entries.html";
+      // Send the data to the server
+      const res = await fetch("/api/admin/import-entries", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": localStorage.getItem("adminToken")
+        },
+        body: JSON.stringify({ rows })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Server failed to process the file.");
+      }
+
+      alert("Import complete!");
+      window.location.href = "/admin-entries.html";
+
+    } catch (error) {
+      console.error(error);
+      alert("Import failed:\n" + error.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "IMPORT ENTRIES";
+    }
   }
 </script>
 

@@ -721,6 +721,25 @@ app.get('/api/admin/export', requireAdmin, (req, res) => {
 // --------------------
 regeneratePlayersCSV();
 
+// TOOL: Export master player list to help with CSV formatting
+app.get('/api/admin/player-list', (req, res) => {
+  try {
+    const players = db.prepare(`SELECT player_name, team, position FROM players ORDER BY player_name ASC`).all();
+    
+    // Create CSV content
+    let csv = "Correct Format,Name Only,Team Only\n";
+    players.forEach(p => {
+      csv += `"${p.player_name}|${p.team}","${p.player_name}","${p.team}"\n`;
+    });
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=master_player_list.csv');
+    res.send(csv);
+  } catch (err) {
+    res.status(500).send("Error generating list: " + err.message);
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
