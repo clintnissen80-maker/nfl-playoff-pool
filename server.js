@@ -593,7 +593,7 @@ app.post('/api/admin/reset-season', requireAdmin, (req, res) => {
 });
 
 // --------------------
-// Admin: bulk import entries from CSV (FINAL – MATCHES SCORES)
+// Admin: bulk import entries from CSV (FINAL – ID SAFE)
 // --------------------
 app.post('/api/admin/import-entries', requireAdmin, (req, res) => {
   try {
@@ -603,32 +603,20 @@ app.post('/api/admin/import-entries', requireAdmin, (req, res) => {
       return res.status(400).json({ error: 'No rows provided' });
     }
 
-    // --------------------------------------------------
-    // 🔑 LOAD CANONICAL PLAYER IDS FROM players.csv
-    // --------------------------------------------------
-    const csvPath = path.join(__dirname, 'players.csv');
-    if (!fs.existsSync(csvPath)) {
-      return res.status(500).json({ error: 'players.csv not found' });
-    }
+    // 🔑 Load canonical players
+    const players = db.prepare(`
+      SELECT player_id, player_name, position, team
+      FROM players
+    `).all();
 
-    const csv = fs.readFileSync(csvPath, 'utf8');
-    const lines = csv.trim().split('\n');
-    const headers = lines.shift().split(',');
-
-    const playerIdMap = {};
-    lines.forEach(line => {
-      const cols = line.split(',');
-      const row = {};
-      headers.forEach((h, i) => row[h] = cols[i]);
-
-      // KEY FORMAT MUST MATCH SCORES + LEADERBOARD
-      const key = `${row.PlayerName}|${row.Position}|${row.TeamID}`;
-      playerIdMap[key] = row.PlayerID;
+    // Build lookup: name|team|position → player_id
+    const lookup = {};
+    players.forEach(p => {
+      const key = `${p.player_name}|${p.team}|${p.position}`;
+      lookup[key] = p.player_id;
     });
 
-    // --------------------------------------------------
-    // WIPE EXISTING ENTRIES (SCORES REMAIN)
-    // --------------------------------------------------
+    // Wipe existing entries
     db.prepare('DELETE FROM entry_players').run();
     db.prepare('DELETE FROM entries').run();
 
@@ -653,7 +641,7 @@ app.post('/api/admin/import-entries', requireAdmin, (req, res) => {
 
         if (!Array.isArray(players) || players.length !== 14) {
           throw new Error(
-            `Row ${index + 1} (${entry_name}): expected 14 players, got ${players?.length || 0}`
+            `Row ${index + 1} (${entry_name}): expected 14 players`
           );
         }
 
@@ -667,18 +655,18 @@ app.post('/api/admin/import-entries', requireAdmin, (req, res) => {
         const entryId = result.lastInsertRowid;
 
         players.forEach(p => {
-          const lookupKey = `${p.player_name}|${p.position}|${p.team}`;
-          const realPlayerId = playerIdMap[lookupKey];
+          const key = `${p.player_name}|${p.team}|${p.position}`;
+          const realId = lookup[key];
 
-          if (!realPlayerId) {
+          if (!realId) {
             throw new Error(
-              `Player not found in players.csv: ${lookupKey}`
+              `Player not found in players table: ${key}`
             );
           }
 
           insertPlayer.run(
             entryId,
-            realPlayerId,
+            realId,
             p.player_name,
             p.position,
             p.team
@@ -692,11 +680,8 @@ app.post('/api/admin/import-entries', requireAdmin, (req, res) => {
     res.json({ success: true, imported: rows.length });
 
   } catch (err) {
-    console.error('IMPORT FAILED:', err.message);
-    res.status(500).json({
-      error: 'Import failed',
-      details: err.message
-    });
+    console.error("IMPORT FAILED:", err.message);
+    res.status(400).json({ error: err.message });
   }
 });
 
