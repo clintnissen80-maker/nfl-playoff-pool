@@ -12,68 +12,98 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin – Player Scores</title>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-    }
-    h2 {
-      margin-top: 30px;
-      border-bottom: 1px solid #ccc;
-      padding-bottom: 5px;
-    }
-    .player {
-      background: #fff;
-      padding: 10px;
-      margin-bottom: 8px;
-      border-radius: 5px;
-      display: grid;
-      grid-template-columns: 1.5fr repeat(5, 1fr);
-      gap: 5px;
-      align-items: center;
-    }
-    .player-name {
-      font-weight: bold;
-      font-size: 14px;
-    }
-    input {
-      width: 100%;
-      padding: 5px;
-      text-align: center;
-    }
-    .total {
-      font-weight: bold;
-      text-align: center;
-    }
-    button {
-      margin-top: 25px;
-      width: 100%;
-      padding: 14px;
-      font-size: 18px;
-      background: #28a745;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f5f5f5;
+    padding: 20px;
+  }
 
-    /* HEADER ROW */
-    .player.header {
-      background: transparent;
-      font-weight: bold;
-      border-bottom: 2px solid #999;
-    }
-    .player.header div {
-      text-align: center;
-    }
-    .player.header div:first-child {
-      text-align: left;
-    }
-  </style>
+  h1 {
+    text-align: center;
+  }
+
+  h2 {
+    margin-top: 30px;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 5px;
+  }
+
+  .player {
+    background: #fff;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 5px;
+    display: grid;
+    grid-template-columns: 1.5fr repeat(5, 1fr);
+    gap: 5px;
+    align-items: center;
+  }
+
+  .player-name {
+    font-weight: bold;
+    font-size: 14px;
+  }
+
+  input {
+    width: 100%;
+    padding: 5px;
+    text-align: center;
+  }
+
+  .total {
+    font-weight: bold;
+    text-align: center;
+  }
+
+  /* MAIN SAVE BUTTON */
+  button {
+    margin-top: 25px;
+    width: 100%;
+    padding: 14px;
+    font-size: 18px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  /* HEADER ROW */
+  .player.header {
+    background: transparent;
+    font-weight: bold;
+    border-bottom: 2px solid #999;
+  }
+
+  .player.header div {
+    text-align: center;
+  }
+
+  .player.header div:first-child {
+    text-align: left;
+  }
+
+  /* LOCKED INPUTS */
+  .locked {
+    background: #eee !important;
+    color: #666;
+    cursor: not-allowed;
+  }
+
+  /* SMALL LOCK BUTTONS IN HEADER */
+  .player.header button {
+    margin-top: 6px;
+    width: auto;
+    padding: 4px 8px;
+    font-size: 12px;
+    background: #6c757d;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
+
 </head>
 
 <body>
@@ -119,10 +149,25 @@
     header.className = 'player header';
     header.innerHTML = `
       <div>Player</div>
-      <div>Wildcard</div>
-      <div>Divisional</div>
-      <div>Conference</div>
-      <div>Super Bowl</div>
+      <div>
+    Wildcard<br>
+    <button onclick="toggleLock('wildcard')">🔒 Lock</button>
+  </div>
+
+  <div>
+    Divisional<br>
+    <button onclick="toggleLock('divisional')">🔒 Lock</button>
+  </div>
+
+  <div>
+    Conference<br>
+    <button onclick="toggleLock('conference')">🔒 Lock</button>
+  </div>
+
+  <div>
+    Super Bowl<br>
+    <button onclick="toggleLock('superbowl')">🔒 Lock</button>
+  </div>
       <div>Total</div>
     `;
     container.appendChild(header);
@@ -171,7 +216,8 @@
       Number(row.querySelector('[data-field="conference"]').value || 0) +
       Number(row.querySelector('[data-field="superbowl"]').value || 0);
 
-    row.querySelector('.total').textContent = total;
+    row.querySelector('.total').textContent = total.toFixed(2);
+
   }
 
   // 🔐 Save scores WITH auth
@@ -206,6 +252,30 @@
 
     alert('Scores saved successfully');
   });
+const lockedColumns = {
+  wildcard: false,
+  divisional: false,
+  conference: false,
+  superbowl: false
+};
+
+function toggleLock(field) {
+  lockedColumns[field] = !lockedColumns[field];
+
+  document.querySelectorAll(`input[data-field="${field}"]`)
+    .forEach(input => {
+      input.disabled = lockedColumns[field];
+      input.classList.toggle("locked", lockedColumns[field]);
+    });
+
+  // Update button label
+  document
+    .querySelectorAll(`button[onclick="toggleLock('${field}')"]`)
+    .forEach(btn => {
+      btn.textContent = lockedColumns[field] ? "🔓 Unlock" : "🔒 Lock";
+    });
+}
+
 </script>
 
 </body>
