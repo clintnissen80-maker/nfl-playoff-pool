@@ -49,6 +49,21 @@
 </head>
 
 <body>
+<button
+  onclick="resetPlayoffSetup()"
+  style="
+    background:#c62828;
+    color:white;
+    padding:10px 14px;
+    border:none;
+    border-radius:4px;
+    font-weight:bold;
+    margin-bottom:15px;
+    cursor:pointer;
+  "
+>
+  🔴 Reset Teams & Player Pool
+</button>
 
 <h1>Playoff Team Selection</h1>
 
@@ -130,6 +145,34 @@
 
     alert("Playoff teams saved successfully.");
   }
+async function resetPlayoffSetup() {
+  const confirmText =
+    "This will:\n\n" +
+    "• Unselect ALL playoff teams\n" +
+    "• Clear last year's player pool\n" +
+    "• Reset available players\n\n" +
+    "This does NOT delete entries or scores.\n\n" +
+    "Continue?";
+
+  if (!confirm(confirmText)) return;
+
+  const token = localStorage.getItem("adminToken");
+
+  const res = await fetch("/api/admin/reset-playoff-setup", {
+    method: "POST",
+    headers: {
+      "Authorization": token
+    }
+  });
+
+  if (!res.ok) {
+    alert("Reset failed.");
+    return;
+  }
+
+  alert("Playoff teams and player pool reset.");
+  window.location.reload();
+}
 </script>
 
 </body>

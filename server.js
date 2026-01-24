@@ -317,6 +317,34 @@ app.post('/api/admin/playoff-teams', requireAdmin, (req, res) => {
 });
 
 // --------------------
+// Admin: reset playoff teams & player pool (NEW)
+// --------------------
+app.post('/api/admin/reset-playoff-setup', requireAdmin, (req, res) => {
+  const teamsFile = '/var/data/playoff-teams.json';
+  const poolFile = '/var/data/player-pool.json';
+  const csvFile = path.join(__dirname, 'players.csv');
+
+  // Remove playoff teams
+  if (fs.existsSync(teamsFile)) {
+    fs.unlinkSync(teamsFile);
+  }
+
+  // Remove player pool
+  if (fs.existsSync(poolFile)) {
+    fs.unlinkSync(poolFile);
+  }
+
+  // Reset players.csv to header only
+  fs.writeFileSync(
+    csvFile,
+    'PlayerID,PlayerName,Position,TeamID\n',
+    'utf8'
+  );
+
+  res.json({ success: true });
+});
+
+// --------------------
 // Admin: player pool
 // --------------------
 app.get('/api/admin/player-pool', requireAdmin, (req, res) => {
