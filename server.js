@@ -602,19 +602,23 @@ app.post('/api/admin/import-entries', requireAdmin, (req, res) => {
     if (!Array.isArray(rows) || !rows.length) {
       return res.status(400).json({ error: 'No rows provided' });
     }
+    // 🔑 Load canonical players from players.csv
+const csvText = fs.readFileSync(
+  path.join(__dirname, 'players.csv'),
+  'utf8'
+);
 
-    // 🔑 Load canonical players
-    const players = db.prepare(`
-      SELECT player_id, player_name, position, team
-      FROM players
-    `).all();
+const lines = csvText.trim().split('\n');
+lines.shift(); // remove header
 
-    // Build lookup: name|team|position → player_id
-    const lookup = {};
-    players.forEach(p => {
-      const key = `${p.player_name}|${p.team}|${p.position}`;
-      lookup[key] = p.player_id;
-    });
+const lookup = {};
+
+lines.forEach(line => {
+  const [player_id, player_name, position, team] = line.split(',');
+
+  const key = `${player_name}|${team}|${position}`;
+  lookup[key] = player_id;
+});
 
     // Wipe existing entries
     db.prepare('DELETE FROM entry_players').run();
