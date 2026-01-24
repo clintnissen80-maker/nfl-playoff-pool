@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (!localStorage.getItem("adminToken")) {
+      window.location.href = "/admin-login.html";
+    }
+  </script>
+
+  <meta charset="UTF-8" />
+  <title>Admin – Import Entries</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 30px;
+    }
+    .box {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 25px;
+      border-radius: 8px;
+    }
+    h1 {
+      text-align: center;
+    }
+    input {
+      width: 100%;
+      margin-top: 15px;
+    }
+    button {
+      margin-top: 25px;
+      width: 100%;
+      padding: 14px;
+      font-size: 18px;
+      background: #c62828;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .warn {
+      background: #fdecea;
+      color: #b71c1c;
+      border: 1px solid #c62828;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-weight: bold;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="box">
+  <h1>Bulk Import Entries</h1>
+
+  <div class="warn">
+    ⚠️ This will DELETE existing entries and replace them.<br>
+    Scores will remain intact.
+  </div>
+
+  <input type="file" id="fileInput" accept=".csv" />
+
+  <button onclick="importCSV()">IMPORT ENTRIES</button>
+</div>
+
+<script>
+  function parseCSV(text) {
+    const lines = text.trim().split("\n");
+    const headers = lines.shift().split("\t");
+
+    return lines.map(line => {
+      const cols = line.split("\t");
+      const row = {};
+      headers.forEach((h, i) => row[h.trim()] = cols[i]?.trim());
+      return row;
+    });
+  }
+
+  async function importCSV() {
+    const file = document.getElementById("fileInput").files[0];
+    if (!file) {
+      alert("Select a CSV file first.");
+      return;
+    }
+
+    const text = await file.text();
+    const raw = parseCSV(text);
+
+    const rows = raw.map(r => {
+      const players = [];
+
+      // QB1 → QB3
+      ["QB","QB","QB","RB","RB","RB","WR","WR","WR","TE","TE","K","K","K"]
+        .forEach((pos, i) => {
+          const name = r[Object.keys(r)[2 + i]];
+          const team = name.slice(-3);
+          players.push({
+            player_name: name,
+            team,
+            position: pos,
+            player_id: `${pos}_${team}_${name.replace(/[^a-zA-Z0-9]/g, '')}`
+          });
+        });
+
+      return {
+        entry_name: r["Entry name"],
+        email: r["Email"],
+        paid: r["Paid"] === "Yes",
+        notes: r["Notes"],
+        players
+      };
+    });
+
+    const res = await fetch("/api/admin/import-entries", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": localStorage.getItem("adminToken")
+      },
+      body: JSON.stringify({ rows })
+    });
+
+    if (!res.ok) {
+      alert("Import failed.");
+      return;
+    }
+
+    alert("Import complete!");
+    window.location.href = "/admin-entries.html";
+  }
+</script>
+
+</body>
+</html>

@@ -593,6 +593,67 @@ app.post('/api/admin/reset-season', requireAdmin, (req, res) => {
 });
 
 // --------------------
+// Admin: bulk import entries from CSV
+// --------------------
+app.post('/api/admin/import-entries', requireAdmin, (req, res) => {
+  const { rows } = req.body;
+
+  if (!Array.isArray(rows) || !rows.length) {
+    return res.status(400).json({ error: 'No rows provided' });
+  }
+
+  // Wipe existing entries (safe — scores remain valid)
+  db.prepare('DELETE FROM entry_players').run();
+  db.prepare('DELETE FROM entries').run();
+
+  const insertEntry = db.prepare(`
+    INSERT INTO entries (entry_name, email, paid, notes)
+    VALUES (?, ?, ?, ?)
+  `);
+
+  const insertPlayer = db.prepare(`
+    INSERT INTO entry_players
+    (entry_id, player_id, player_name, position, team)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+
+  const tx = db.transaction(() => {
+    rows.forEach(row => {
+      const {
+        entry_name,
+        email,
+        paid,
+        notes,
+        players
+      } = row;
+
+      const result = insertEntry.run(
+        entry_name,
+        email,
+        paid ? 1 : 0,
+        notes || ''
+      );
+
+      const entryId = result.lastInsertRowid;
+
+      players.forEach(p => {
+        insertPlayer.run(
+          entryId,
+          p.player_id,
+          p.player_name,
+          p.position,
+          p.team
+        );
+      });
+    });
+  });
+
+  tx();
+
+  res.json({ success: true, imported: rows.length });
+});
+
+// --------------------
 // Admin: export entries CSV
 // --------------------
 app.get('/api/admin/export', requireAdmin, (req, res) => {
