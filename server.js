@@ -599,6 +599,18 @@ app.post('/api/admin/import-entries', requireAdmin, (req, res) => {
   try {
     const { rows } = req.body;
 
+  // 🔑 Load existing player pool so imports reuse correct player_ids
+  const existingPlayers = db.prepare(`
+    SELECT player_id, player_name, position, team
+    FROM players
+  `).all();
+
+  const playerLookup = {};
+  existingPlayers.forEach(p => {
+    const key = `${p.player_name}|${p.team}|${p.position}`;
+    playerLookup[key] = p.player_id;
+  });
+
     if (!Array.isArray(rows) || !rows.length) {
       return res.status(400).json({ error: 'No rows provided' });
     }
@@ -646,19 +658,25 @@ app.post('/api/admin/import-entries', requireAdmin, (req, res) => {
         const entryId = result.lastInsertRowid;
 
         players.forEach(p => {
-          if (!p.player_id || !p.player_name || !p.position || !p.team) {
-            errors.push(`Row ${index + 1} (${entry_name}): invalid player data`);
-            return;
-          }
+  const lookupKey = `${p.player_name}|${p.team}|${p.position}`;
+  const realPlayerId = playerLookup[lookupKey];
 
-          insertPlayer.run(
-            entryId,
-            p.player_id,
-            p.player_name,
-            p.position,
-            p.team
-          );
-        });
+  if (!realPlayerId) {
+    errors.push(
+      `Row ${index + 1} (${entry_name}): player not found in pool: ${lookupKey}`
+    );
+    return;
+  }
+
+  insertPlayer.run(
+    entryId,
+    realPlayerId,
+    p.player_name,
+    p.position,
+    p.team
+  );
+});
+
       });
     });
 
