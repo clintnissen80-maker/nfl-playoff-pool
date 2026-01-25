@@ -260,6 +260,7 @@ app.get('/api/entries/count', (req, res) => {
 app.get('/api/leaderboard', (req, res) => {
   const rows = db.prepare(`
     SELECT
+      e.id,
       e.entry_name,
       SUM(COALESCE(s.wildcard,0) + COALESCE(s.divisional,0) + COALESCE(s.conference,0) + COALESCE(s.superbowl,0)) AS total_score
     FROM entries e
@@ -268,6 +269,18 @@ app.get('/api/leaderboard', (req, res) => {
     GROUP BY e.id
     ORDER BY total_score DESC, e.created_at ASC
   `).all();
+    // attach players to each entry
+// attach players to each entry
+for (const entry of rows) {
+  const players = db.prepare(`
+    SELECT player_name AS name, team
+    FROM entry_players
+    WHERE entry_id = ?
+  `).all(entry.id);
+
+  entry.players = players;
+}
+
   res.json(rows);
 });
 
