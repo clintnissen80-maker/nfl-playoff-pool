@@ -20,7 +20,7 @@
       margin-bottom: 8px;
       border-radius: 6px;
       display: grid;
-      grid-template-columns: 60px 1fr 120px;
+      grid-template-columns: 60px 1fr 120px 2fr;
       align-items: center;
       font-size: 16px;
     }
@@ -50,6 +50,14 @@
 
 <script>
   const board = document.getElementById('board');
+  // ❌ Teams eliminated from the playoffs (update this each round)
+const eliminatedTeams = [
+  "HOU",
+  "DAL",
+  "BUF",
+  "SF",
+  "GB"
+];
 
   // 🌐 PUBLIC leaderboard endpoint (no auth)
   fetch('/api/leaderboard')
@@ -65,17 +73,25 @@
       const header = document.createElement('div');
       header.className = 'row header';
       header.innerHTML = `
-        <div class="rank">Rank</div>
-        <div>Entry</div>
-        <div class="score">Score</div>
-      `;
+  <div class="rank">Rank</div>
+  <div>Entry</div>
+  <div class="score">Score</div>
+  <div>Remaining Players</div>
+`;
       board.appendChild(header);
 
       let lastScore = null;
       let displayRank = 0;
 
       entries.forEach((entry, index) => {
-        const score = Number(entry.total_score).toFixed(2);
+
+  const score = Number(entry.total_score).toFixed(2);
+
+  // players still alive (not eliminated)
+  const remainingPlayers = entry.players
+    .filter(p => !eliminatedTeams.includes(p.team))
+    .map(p => `${p.name} (${p.team})`)
+    .join(", ");
 
         if (lastScore === null || score < lastScore) {
           displayRank = index + 1;
@@ -87,10 +103,11 @@
         if (displayRank === 1) row.classList.add('leader');
 
         row.innerHTML = `
-          <div class="rank">#${displayRank}</div>
-          <div>${entry.entry_name}</div>
-          <div class="score">${score}</div>
-        `;
+  <div class="rank">#${displayRank}</div>
+  <div>${entry.entry_name}</div>
+  <div class="score">${score}</div>
+  <div>${remainingPlayers || "—"}</div>
+`;
 
         board.appendChild(row);
       });
