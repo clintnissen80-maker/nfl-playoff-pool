@@ -88,10 +88,11 @@ const eliminatedTeams = [
   const score = Number(entry.total_score).toFixed(2);
 
   // players still alive (not eliminated)
-  const remainingPlayers = entry.players
-    .filter(p => !eliminatedTeams.includes(p.team))
-    .map(p => `${p.name} (${p.team})`)
-    .join(", ");
+  const remainingPlayers = (entry.players || [])
+  .filter(p => !eliminatedTeams.includes(p.team))
+  .map(p => `${p.name} (${p.team})`)
+  .join(", ");
+
 
         if (lastScore === null || score < lastScore) {
           displayRank = index + 1;
