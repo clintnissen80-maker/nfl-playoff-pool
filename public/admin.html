@@ -70,27 +70,25 @@
 
 <script>
   const container = document.getElementById("entries");
-  const token = localStorage.getItem("adminToken");
 
-fetch("/api/admin/entries", {
-  method: "GET",
-  headers: {
-    "Authorization": localStorage.getItem("adminToken")
-  }
-})
+  // We no longer check for a token here so the public can see the page
+  fetch("/api/admin/player-scores") 
     .then(res => {
-      if (res.status === 403) {
-        throw new Error("unauthorized");
+      if (!res.ok) {
+        throw new Error("Could not load scores");
       }
       return res.json();
     })
-    .then(entries => {
+    .then(players => {
       container.innerHTML = "";
 
-      if (!entries.length) {
-        container.textContent = "No entries found.";
+      if (!players || !players.length) {
+        container.textContent = "No scoring data found.";
         return;
       }
+
+      // The rest of your code that builds the table/list goes here...
+      // (Keep the logic you already had for rendering the 'players' or 'entries' variables)
 
       const topScore = Number(entries[0].total_score);
 
