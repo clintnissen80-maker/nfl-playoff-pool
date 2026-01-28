@@ -80,58 +80,68 @@
 <script>
   const container = document.getElementById("stats-container");
 
-  // Fetching from the open endpoint in server.js
-  fetch("/api/admin/player-scores") 
-    .then(res => {
-      if (!res.ok) throw new Error("Could not load scores");
-      return res.json();
-    })
-    .then(players => {
-      container.innerHTML = "";
+  // We fetch BOTH the player scores and the leaderboard to calculate exposure
+  Promise.all([
+    fetch("/api/admin/player-scores").then(res => res.json()),
+    fetch("/api/leaderboard").then(res => res.json())
+  ])
+  .then(([players, entries]) => {
+    container.innerHTML = "";
+    
+    const totalEntries = entries.length;
 
-      if (!players || !players.length) {
-        container.textContent = "No scoring data available yet.";
-        return;
-      }
-
-      // Sort: Highest scorers first
-      players.sort((a, b) => {
-        const scoreA = (a.wildcard || 0) + (a.divisional || 0) + (a.conference || 0) + (a.superbowl || 0);
-        const scoreB = (b.wildcard || 0) + (b.divisional || 0) + (b.conference || 0) + (b.superbowl || 0);
-        return scoreB - scoreA;
+    // 1. Create a "Map" to count how many times each player appears in everyone's entries
+    const exposureMap = {};
+    entries.forEach(entry => {
+      entry.players.forEach(p => {
+        // We use player_name as the key to count occurrences
+        exposureMap[p.name] = (exposureMap[p.name] || 0) + 1;
       });
-
-      players.forEach(player => {
-        const total = (player.wildcard || 0) + (player.divisional || 0) + (player.conference || 0) + (player.superbowl || 0);
-        
-        const card = document.createElement("div");
-        card.className = "player-card";
-        card.innerHTML = `
-          <div class="player-header">
-            <div class="player-name">${player.player_name} <small>(${player.team} - ${player.position})</small></div>
-            <div class="total-points">${total.toFixed(2)} pts</div>
-          </div>
-          <div class="grid">
-            <div class="grid-label">Wildcard</div>
-            <div class="grid-label">Divisional</div>
-            <div class="grid-label">Conf</div>
-            <div class="grid-label">SB</div>
-            <div class="grid-label">Total</div>
-            
-            <div class="grid-value">${player.wildcard || 0}</div>
-            <div class="grid-value">${player.divisional || 0}</div>
-            <div class="grid-value">${player.conference || 0}</div>
-            <div class="grid-value">${player.superbowl || 0}</div>
-            <div class="grid-value"><strong>${total.toFixed(2)}</strong></div>
-          </div>
-        `;
-        container.appendChild(card);
-      });
-    })
-    .catch(err => {
-      container.innerHTML = "<p>Error loading stats. Please try again later.</p>";
-      console.error(err);
     });
+
+    // 2. Sort players by total score (highest first)
+    players.sort((a, b) => {
+      const scoreA = (a.wildcard || 0) + (a.divisional || 0) + (a.conference || 0) + (a.superbowl || 0);
+      const scoreB = (b.wildcard || 0) + (b.divisional || 0) + (b.conference || 0) + (b.superbowl || 0);
+      return scoreB - scoreA;
+    });
+
+    // 3. Render the cards
+    players.forEach(player => {
+      const totalScore = (player.wildcard || 0) + (player.divisional || 0) + (player.conference || 0) + (player.superbowl || 0);
+      
+      // Calculate exposure percentage
+      const count = exposureMap[player.player_name] || 0;
+      const exposurePct = totalEntries > 0 ? ((count / totalEntries) * 100).toFixed(0) : 0;
+
+      const card = document.createElement("div");
+      card.className = "player-card";
+      card.innerHTML = `
+        <div class="player-header">
+          <div class="player-name">
+            ${player.player_name} <small>(${player.team})</small>
+            <span style="font-size: 0.8rem; color: #666; font-weight: normal; margin-left: 10px;">
+              ${exposurePct}% of Entries (${count}/${totalEntries})
+            </span>
+          </div>
+          <div class="total-points">${totalScore.toFixed(2)} pts</div>
+        </div>
+        <div class="grid">
+          <div class="grid-label">WC</div><div class="grid-label">DIV</div><div class="grid-label">CONF</div><div class="grid-label">SB</div><div class="grid-label">TOTAL</div>
+          <div class="grid-value">${player.wildcard || 0}</div>
+          <div class="grid-value">${player.divisional || 0}</div>
+          <div class="grid-value">${player.conference || 0}</div>
+          <div class="grid-value">${player.superbowl || 0}</div>
+          <div class="grid-value"><strong>${totalScore.toFixed(2)}</strong></div>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  })
+  .catch(err => {
+    console.error(err);
+    container.textContent = "Error loading stats.";
+  });
 </script>
 
 </body>
