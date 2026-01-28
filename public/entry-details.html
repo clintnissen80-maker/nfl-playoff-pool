@@ -62,7 +62,7 @@
         const liveScore = scoreMap[p.name] || 0;
         tableRows += `
           <tr>
-            <td><span class="pos-tag">${p.position}</span> ${p.name} (${p.team})</td>
+            <td><span class="pos-tag">${p.position || ""}</span> ${p.name || "Unknown"} (${p.team || ""})</td>
             <td style="text-align: right; font-weight: bold;">${liveScore.toFixed(2)} pts</td>
           </tr>
         `;
