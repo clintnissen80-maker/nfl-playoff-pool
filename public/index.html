@@ -67,6 +67,23 @@
       font-weight: bold;
       text-align: center;
     }
+   .secondary-links {
+      margin-top: 40px;
+      border-top: 1px solid #ddd;
+      padding-top: 20px;
+      text-align: center;
+    }
+    .link-btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: #6c757d;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 16px;
+    }
   </style>
 </head>
 
@@ -81,12 +98,16 @@
   <h1>NFL Playoff Pool</h1>
 
   <label for="entryName">Entry Name</label>
-  <input id="entryName" type="text" placeholder="My Entry 1" />
+  <input id="entryName" type="text" placeholder="First Entry Name" />
 
   <label for="email">Email</label>
-  <input id="email" type="email" placeholder="you@email.com" />
+  <input id="email" type="email" placeholder="youremail@xxxmail.com" />
 
   <button id="continueBtn" disabled onclick="goNext()">Continue</button>
+  <div class="secondary-links">
+    <a href="/leaderboard.html" class="link-btn">View Leaderboard</a>
+    <a href="/admin.html" class="link-btn">Detailed Scoring</a>
+  </div>
 </div>
 
 <script>
