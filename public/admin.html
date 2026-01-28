@@ -2,12 +2,7 @@
 <html lang="en">
 <head>
   <!-- 🔐 Admin guard -->
-  <script>
-    if (!localStorage.getItem("adminToken")) {
-      window.location.href = "/admin-login.html";
-    }
-  </script>
-
+  
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin – Detailed Scoreboard</title>
@@ -87,8 +82,7 @@
         return;
       }
 
-      // The rest of your code that builds the table/list goes here...
-      // (Keep the logic you already had for rendering the 'players' or 'entries' variables)
+      // (logic for rendering the players or entries variables)
 
       const topScore = Number(entries[0].total_score);
 
