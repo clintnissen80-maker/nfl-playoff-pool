@@ -361,7 +361,7 @@ app.get('/api/admin/entries', requireAdmin, (req, res) => {
   res.json(entries.map(e => ({ ...e, players: stmt.all(e.id) })));
 });
 
-app.get('/api/admin/player-scores', requireAdmin, (req, res) => {
+app.get('/api/admin/player-scores', (req, res) => {
   const csv = fs.readFileSync(path.join(__dirname, 'players.csv'), 'utf8');
   const lines = csv.trim().split('\n');
   const headers = lines[0].split(',');
