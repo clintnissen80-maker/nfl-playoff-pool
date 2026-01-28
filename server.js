@@ -289,7 +289,7 @@ app.get('/api/entry-status', (req, res) => res.json(getSettings()));
 // --------------------
 // Admin Endpoints
 // --------------------
-app.get('/api/admin/entry-status', requireAdmin, (req, res) => res.json(getSettings()));
+app.get('/api/admin/entry-status', (req, res) => res.json(getSettings()));
 
 app.post('/api/admin/entry-status', requireAdmin, (req, res) => {
   const { entriesOpen } = req.body;
