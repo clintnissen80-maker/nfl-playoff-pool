@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Player Stats – NFL Playoff Pool</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+      margin: 0;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .player-card {
+      background: #ffffff;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .player-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+    .player-name {
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    .total-points {
+      font-size: 1.1rem;
+      color: #007bff;
+      font-weight: bold;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      text-align: center;
+    }
+    .grid-label {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+      font-weight: bold;
+    }
+    .grid-value {
+      font-size: 16px;
+      padding: 5px 0;
+    }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 20px;
+      text-decoration: none;
+      color: #007bff;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <a href="index.html" class="back-link">← Back to Entry Form</a>
+  <h1>Player Scoring Stats</h1>
+  <div id="stats-container">Loading scores...</div>
+</div>
+
+<script>
+  const container = document.getElementById("stats-container");
+
+  // Fetching from the open endpoint in server.js
+  fetch("/api/admin/player-scores") 
+    .then(res => {
+      if (!res.ok) throw new Error("Could not load scores");
+      return res.json();
+    })
+    .then(players => {
+      container.innerHTML = "";
+
+      if (!players || !players.length) {
+        container.textContent = "No scoring data available yet.";
+        return;
+      }
+
+      // Sort: Highest scorers first
+      players.sort((a, b) => {
+        const scoreA = (a.wildcard || 0) + (a.divisional || 0) + (a.conference || 0) + (a.superbowl || 0);
+        const scoreB = (b.wildcard || 0) + (b.divisional || 0) + (b.conference || 0) + (b.superbowl || 0);
+        return scoreB - scoreA;
+      });
+
+      players.forEach(player => {
+        const total = (player.wildcard || 0) + (player.divisional || 0) + (player.conference || 0) + (player.superbowl || 0);
+        
+        const card = document.createElement("div");
+        card.className = "player-card";
+        card.innerHTML = `
+          <div class="player-header">
+            <div class="player-name">${player.player_name} <small>(${player.team} - ${player.position})</small></div>
+            <div class="total-points">${total.toFixed(2)} pts</div>
+          </div>
+          <div class="grid">
+            <div class="grid-label">Wildcard</div>
+            <div class="grid-label">Divisional</div>
+            <div class="grid-label">Conf</div>
+            <div class="grid-label">SB</div>
+            <div class="grid-label">Total</div>
+            
+            <div class="grid-value">${player.wildcard || 0}</div>
+            <div class="grid-value">${player.divisional || 0}</div>
+            <div class="grid-value">${player.conference || 0}</div>
+            <div class="grid-value">${player.superbowl || 0}</div>
+            <div class="grid-value"><strong>${total.toFixed(2)}</strong></div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    })
+    .catch(err => {
+      container.innerHTML = "<p>Error loading stats. Please try again later.</p>";
+      console.error(err);
+    });
+</script>
+
+</body>
+</html>
