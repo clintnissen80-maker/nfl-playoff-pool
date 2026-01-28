@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Detailed Entry Scores – NFL Playoff Pool</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; margin: 0; }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { text-align: center; color: #333; }
+    .entry-section { background: white; padding: 20px; margin-bottom: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-left: 6px solid #007bff; }
+    .entry-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+    .entry-title { font-size: 1.4rem; font-weight: bold; color: #222; }
+    .entry-score { font-size: 1.3rem; font-weight: bold; color: #28a745; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th { text-align: left; background: #f8f9fa; padding: 10px; border-bottom: 2px solid #dee2e6; color: #666; font-size: 0.9rem; text-transform: uppercase; }
+    td { padding: 12px 10px; border-bottom: 1px solid #eee; font-size: 1rem; }
+    .pos-tag { font-weight: bold; color: #666; width: 40px; display: inline-block; }
+    .back-btn { display: inline-block; margin-bottom: 20px; text-decoration: none; color: #007bff; font-weight: bold; }
+    tr:hover { background-color: #fcfcfc; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <a href="/" class="back-btn">← Back to Home</a>
+  <h1>Detailed Entry Breakdowns</h1>
+  <div id="details-list">Loading all entries...</div>
+</div>
+
+<script>
+  const listContainer = document.getElementById("details-list");
+
+  // Fetch both the Leaderboard (for entry lists) and Player Scores (for the "math")
+  Promise.all([
+    fetch("/api/leaderboard").then(res => res.json()),
+    fetch("/api/admin/player-scores").then(res => res.json())
+  ])
+  .then(([entries, playerScores]) => {
+    listContainer.innerHTML = "";
+
+    // 1. Create a lookup map for player scores for lightning-fast access
+    const scoreMap = {};
+    playerScores.forEach(p => {
+      const total = (p.wildcard || 0) + (p.divisional || 0) + (p.conference || 0) + (p.superbowl || 0);
+      scoreMap[p.player_name] = total;
+    });
+
+    if (!entries.length) {
+      listContainer.textContent = "No entries found.";
+      return;
+    }
+
+    // 2. Loop through each entry and build their section
+    entries.forEach((entry, index) => {
+      const section = document.createElement("div");
+      section.className = "entry-section";
+
+      let tableRows = "";
+      // Loop through the specific players this entry picked
+      entry.players.forEach(p => {
+        const liveScore = scoreMap[p.name] || 0;
+        tableRows += `
+          <tr>
+            <td><span class="pos-tag">${p.position}</span> ${p.name} (${p.team})</td>
+            <td style="text-align: right; font-weight: bold;">${liveScore.toFixed(2)} pts</td>
+          </tr>
+        `;
+      });
+
+      section.innerHTML = `
+        <div class="entry-header">
+          <div class="entry-title">#${index + 1} — ${entry.entry_name}</div>
+          <div class="entry-score">Total: ${Number(entry.total_score).toFixed(2)}</div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Player Selection</th>
+              <th style="text-align: right;">Live Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      `;
+      listContainer.appendChild(section);
+    });
+  })
+  .catch(err => {
+    console.error(err);
+    listContainer.innerHTML = "<p>Error loading detailed scores.</p>";
+  });
+</script>
+
+</body>
+</html>

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NFL Playoff Pool</title>
 
-  <style>
+<style>
     body {
       font-family: Arial, sans-serif;
       margin: 0;
@@ -19,10 +19,12 @@
       background: #ffffff;
       padding: 20px;
       border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
     h1 {
       text-align: center;
+      color: #333;
     }
 
     label {
@@ -36,8 +38,10 @@
       padding: 10px;
       margin-top: 5px;
       font-size: 16px;
+      box-sizing: border-box; /* Ensures padding doesn't push input out of container */
     }
 
+    /* Main blue "Continue" button */
     button {
       margin-top: 25px;
       width: 100%;
@@ -48,6 +52,7 @@
       border: none;
       border-radius: 4px;
       opacity: 0.5;
+      transition: opacity 0.3s;
     }
 
     button.enabled {
@@ -67,24 +72,34 @@
       font-weight: bold;
       text-align: center;
     }
-   .secondary-links {
-      margin-top: 40px;
-      border-top: 1px solid #ddd;
-      padding-top: 20px;
-      text-align: center;
+
+    /* New Button Group Area */
+    .button-group { 
+      margin-top: 30px; 
+      border-top: 1px solid #ddd; 
+      padding-top: 20px; 
     }
-    .link-btn {
+
+    /* Styled gray buttons for Leaderboard, Stats, and Details */
+    .secondary-btn {
       display: block;
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 10px;
+      text-align: center;
+      text-decoration: none;
       background: #6c757d;
       color: white;
-      text-decoration: none;
+      padding: 12px;
+      margin-bottom: 10px;
       border-radius: 4px;
       font-size: 16px;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+
+    .secondary-btn:hover {
+      background: #5a6268;
     }
   </style>
+
 </head>
 
 <body>
@@ -104,10 +119,11 @@
   <input id="email" type="email" placeholder="youremail@xxxmail.com" />
 
   <button id="continueBtn" disabled onclick="goNext()">Continue</button>
-  <div class="secondary-links">
-    <a href="/leaderboard.html" class="link-btn">View Leaderboard</a>
-    <a href="/stats.html" class="link-btn">Player Scores</a>
-  </div>
+  <div class="button-group">
+  <a href="/leaderboard.html" class="secondary-btn">View Leaderboard</a>
+  <a href="/stats.html" class="secondary-btn">Player Stats & Exposure</a>
+  <a href="/entry-details.html" class="secondary-btn">Detailed Entry Scores</a>
+</div>
 </div>
 
 <script>
