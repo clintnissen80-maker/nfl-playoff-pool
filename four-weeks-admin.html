@@ -172,12 +172,14 @@ async function checkEntryStatus() {
                 const currentData = await currentRes.json();
                 const newState = !currentData.entriesOpen;
 
-                // Send request with direct admin credentials
+                // Send plain base64 token containing the admin password
+                const token = btoa('admin123');
+
                 const response = await fetch('/api/admin/entry-status', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': btoa('admin:admin123') 
+                        'Authorization': token
                     },
                     body: JSON.stringify({ entriesOpen: newState })
                 });
