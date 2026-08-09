@@ -39,6 +39,8 @@
             <!-- Team rows will be dynamically inserted here by JavaScript -->
         </div>
         <button type="submit">Save All Weekly Scores</button>
+        <hr style="margin-top: 30px; border: 0; border-top: 1px dashed #ccc;">
+        <button type="button" id="masterResetBtn" style="background-color: #c62828; margin-top: 10px;">⚠️ Master Reset Contest ⚠️</button>
     </form>
 
     <div class="nav-links">
@@ -132,6 +134,30 @@
 
         // Initial Load
         fetchScores();
+        
+        // Handle the Master Reset Button with safety confirmations
+        document.getElementById('masterResetBtn').addEventListener('click', async () => {
+        const confirm1 = confirm("WARNING: This will completely delete ALL user entries and wipe all scores back to 0. Are you absolutely sure?");
+        if (!confirm1) return;
+
+        const confirm2 = confirm("FINAL WARNING: This cannot be undone. Type 'OK' to permanently wipe the 4-Weeks Challenge data.");
+        if (!confirm2) return;
+
+        try {
+            const response = await fetch('/api/challenge-master-reset', { method: 'POST' });
+            const result = await response.json();
+
+        if (result.success) {
+            alert(result.message);
+            fetchScores(); // Refresh the inputs on screen
+        } else {
+            alert("Reset failed: " + result.message);
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Communication error during master reset.");
+    }
+});
     </script>
 </body>
 </html>
