@@ -155,14 +155,17 @@ function requireAdmin(req, res, next) {
   if (!token) return res.status(403).json({ error: "Admin only" });
 
   try {
-    const decoded = Buffer.from(token, "base64").toString();
+    // Strip "Bearer " or "Basic " prefixes if present
+    const cleanToken = token.replace(/^(Bearer|Basic)\s+/i, '').trim();
+    const decoded = Buffer.from(cleanToken, "base64").toString('utf8');
     const adminPass = process.env.ADMIN_PASSWORD || "admin123";
-    if (!decoded.includes(adminPass)) {
-      throw new Error("Invalid token");
+
+    if (decoded.includes(adminPass) || cleanToken === adminPass) {
+      return next();
     }
-    next();
-  } catch {
-    res.status(403).json({ error: "Invalid token" });
+    throw new Error("Invalid token credential");
+  } catch (err) {
+    return res.status(403).json({ error: "Invalid token" });
   }
 }
 
