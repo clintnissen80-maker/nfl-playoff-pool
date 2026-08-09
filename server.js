@@ -509,20 +509,27 @@ app.get('/api/admin/export', requireAdmin, (req, res) => {
 // NFL FIRST 4-WEEKS CHALLENGE ROUTES
 // ==========================================
 
-// Route to serve the entry page
+// Entry Page Routes
 app.get('/four-weeks-entry', (req, res) => {
-    res.sendFile(path.join(__dirname, 'four-weeks-entry.html')); 
-    // Note: If your HTML files live inside a "public" or "views" folder, 
-    // change the line above to: res.sendFile(path.join(__dirname, 'public', 'four-weeks-entry.html'));
+    res.sendFile(path.join(__dirname, 'four-weeks-entry.html'));
+});
+app.get('/four-weeks-entry.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'four-weeks-entry.html'));
 });
 
-// Route to serve the public leaderboard page (we will create the HTML for this next)
+// Leaderboard Page Routes
 app.get('/four-weeks-leaderboard', (req, res) => {
     res.sendFile(path.join(__dirname, 'four-weeks-leaderboard.html'));
 });
+app.get('/four-weeks-leaderboard.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'four-weeks-leaderboard.html'));
+});
 
-// Route to serve the isolated challenge admin page (Obscured URL)
+// Hidden Admin Page Routes
 app.get('/admin/manage-4w-pool-x97q2', (req, res) => {
+    res.sendFile(path.join(__dirname, 'four-weeks-admin.html'));
+});
+app.get('/admin/manage-4w-pool-x97q2.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'four-weeks-admin.html'));
 });
 
