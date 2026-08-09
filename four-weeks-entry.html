@@ -19,6 +19,37 @@
         
         .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; margin: 20px 0; }
         
+        .rules-card {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 14px 20px;
+    margin: 15px auto 20px auto;
+    max-width: 550px;
+    text-align: left;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+.rules-card ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #e2e8f0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.rules-card li {
+    margin-bottom: 6px;
+}
+
+.rules-card li:last-child {
+    margin-bottom: 0;
+}
+
+.rules-card strong {
+    color: #38bdf8; /* Highlight accent color */
+}
+
         /* Team cards styling fixed for dark background */
         .team-card { 
             padding: 15px 5px; 
