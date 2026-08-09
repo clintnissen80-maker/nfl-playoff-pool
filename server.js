@@ -519,6 +519,52 @@ app.get('/api/admin/export', requireAdmin, (req, res) => {
 // NFL FIRST 4-WEEKS CHALLENGE ROUTES
 // ==========================================
 
+// --------------------
+// Admin Security Middleware
+// --------------------
+function requireAdmin(req, res, next) {
+  const token = req.headers.authorization;
+  if (!token) return res.status(403).json({ error: "Admin token missing" });
+
+  try {
+    const cleanToken = token.replace(/^(Bearer|Basic)\s+/i, '').trim();
+    const decoded = Buffer.from(cleanToken, "base64").toString('utf8');
+    const adminPass = process.env.ADMIN_PASSWORD || "admin123";
+
+    if (decoded === adminPass || decoded.includes(adminPass)) {
+      return next();
+    }
+    return res.status(403).json({ error: "Invalid admin password" });
+  } catch (err) {
+    return res.status(403).json({ error: "Invalid token encoding" });
+  }
+}
+
+// --------------------
+// Admin Entry Lock Status Endpoints
+// --------------------
+// Check lock status (requires password token)
+app.get('/api/admin/entry-status', requireAdmin, (req, res) => {
+    const settings = getSettings();
+    res.json({ entriesOpen: settings.entriesOpen });
+});
+
+// Toggle lock status (requires password token)
+app.post('/api/admin/entry-status', requireAdmin, (req, res) => {
+    const { entriesOpen } = req.body;
+    
+    // Read current settings file, update entriesOpen, and save back to disk
+    const settings = getSettings();
+    settings.entriesOpen = entriesOpen;
+    saveSettings(settings); // Saves to your JSON or DB settings file
+
+    res.json({ success: true, entriesOpen: settings.entriesOpen });
+});
+
+// --------------------
+// Page Routes
+// --------------------
+
 // Entry Page Routes
 app.get('/four-weeks-entry', (req, res) => {
     res.sendFile(path.join(__dirname, 'four-weeks-entry.html'));

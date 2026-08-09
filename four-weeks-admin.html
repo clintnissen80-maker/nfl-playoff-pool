@@ -18,51 +18,181 @@
         button:hover { background-color: #b71c1c; }
         .nav-links { text-align: center; margin-top: 20px; }
         .nav-links a { color: #0056b3; text-decoration: none; margin: 0 10px; }
+        .hidden { display: none !important; }
+        .card-login { background: #fff; padding: 30px; border-radius: 8px; border: 1px solid #ccc; text-align: center; margin-top: 40px; }
+        input[type="password"] { width: 80%; padding: 10px; margin: 15px 0; border-radius: 4px; border: 1px solid #ccc; font-size: 16px; }
     </style>
 </head>
 <body>
 
-    <h1>🛠️ Admin: NFL First 4-Weeks Challenge</h1>
-
-    <div class="control-group" style="border-left: 5px solid #2563eb; display: flex; align-items: center; justify-content: space-between;">
-    <div>
-        <strong>Contest Entry Status:</strong> 
-        <span id="entryStatusBadge" style="padding: 4px 8px; border-radius: 4px; font-weight: bold;">Loading...</span>
-    </div>
-    <button type="button" id="toggleEntriesBtn" style="width: auto; margin-top: 0; padding: 8px 16px; background-color: #2563eb;">Toggle Lock</button>
-</div>
-    
-    <div class="control-group">
-        <label for="weekSelect">Select Week to Edit:</label>
-        <select id="weekSelect">
-            <option value="week1_pts">Week 1</option>
-            <option value="week2_pts">Week 2</option>
-            <option value="week3_pts">Week 3</option>
-            <option value="week4_pts">Week 4</option>
-        </select>
+    <!-- 1. AUTHENTICATION GATE -->
+    <div id="loginCard" class="card-login">
+        <h1>🔒 Admin Authentication</h1>
+        <p>Enter password to access contest controls</p>
+        <input type="password" id="adminPasswordInput" placeholder="Admin Password">
+        <button id="loginBtn">Authenticate</button>
+        <p id="loginError" style="color: #d32f2f; margin-top: 10px; display: none;">Invalid Password</p>
     </div>
 
-    <form id="adminScoreForm">
-        <div id="teamsContainer">
-            <!-- Team rows will be dynamically inserted here by JavaScript -->
+    <!-- 2. MAIN ADMIN DASHBOARD (Hidden until authenticated) -->
+    <div id="adminContent" class="hidden">
+        <h1>🛠️ Admin: NFL First 4-Weeks Challenge</h1>
+
+        <!-- Contest Lock Control -->
+        <div class="control-group" style="border-left: 5px solid #2563eb; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <strong>Contest Entry Status:</strong> 
+                <span id="entryStatusBadge" style="padding: 4px 8px; border-radius: 4px; font-weight: bold;">Loading...</span>
+            </div>
+            <button type="button" id="toggleEntriesBtn" style="width: auto; margin-top: 0; padding: 8px 16px; background-color: #2563eb;">Toggle Lock</button>
         </div>
-        <button type="submit">Save All Weekly Scores</button>
-        <hr style="margin-top: 30px; border: 0; border-top: 1px dashed #ccc;">
-        <button type="button" id="masterResetBtn" style="background-color: #c62828; margin-top: 10px;">⚠️ Master Reset Contest ⚠️</button>
-    </form>
+        
+        <!-- Week Selector -->
+        <div class="control-group">
+            <label for="weekSelect">Select Week to Edit:</label>
+            <select id="weekSelect">
+                <option value="week1_pts">Week 1</option>
+                <option value="week2_pts">Week 2</option>
+                <option value="week3_pts">Week 3</option>
+                <option value="week4_pts">Week 4</option>
+            </select>
+        </div>
 
-    <div class="nav-links">
-        <a href="/admin/manage-4w-entries" style="font-weight: bold; color: #d32f2f;">📋 Manage Entries (Paid / Delete)</a> | 
-        <a href="/four-weeks-entry">Go to Entry Form</a> | 
-        <a href="/four-weeks-leaderboard">Go to Leaderboard →</a>
+        <!-- Weekly Scores Form -->
+        <form id="adminScoreForm">
+            <div id="teamsContainer">
+                <!-- Team rows dynamically inserted -->
+            </div>
+            <button type="submit">Save All Weekly Scores</button>
+            <hr style="margin-top: 30px; border: 0; border-top: 1px dashed #ccc;">
+            <button type="button" id="masterResetBtn" style="background-color: #c62828; margin-top: 10px;">⚠️ Master Reset Contest ⚠️</button>
+        </form>
+
+        <!-- Navigation Links -->
+        <div class="nav-links">
+            <a href="/admin/manage-4w-entries" style="font-weight: bold; color: #d32f2f;">📋 Manage Entries (Paid / Delete)</a> | 
+            <a href="/four-weeks-entry">Go to Entry Form</a> | 
+            <a href="/four-weeks-leaderboard">Go to Leaderboard →</a>
+            <br><br>
+            <a href="#" id="logoutBtn" style="color: #666; font-size: 12px;">🔒 Lock Admin Panel (Logout)</a>
+        </div>
     </div>
 
     <script>
         let allTeamScores = [];
+        let adminToken = sessionStorage.getItem('adminToken') || '';
+
         const weekSelect = document.getElementById('weekSelect');
         const container = document.getElementById('teamsContainer');
 
-        // 1. Fetch current scores from server
+        // Check token on page load
+        if (adminToken) {
+            verifyTokenAndLoad();
+        }
+
+        // Login Handler
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const pass = document.getElementById('adminPasswordInput').value;
+            const token = btoa(pass);
+
+            try {
+                const res = await fetch('/api/admin/entry-status', {
+                    headers: { 'Authorization': token }
+                });
+
+                if (res.ok) {
+                    adminToken = token;
+                    sessionStorage.setItem('adminToken', token);
+                    document.getElementById('loginError').style.display = 'none';
+                    showDashboard();
+                } else {
+                    document.getElementById('loginError').style.display = 'block';
+                }
+            } catch (err) {
+                console.error('Authentication error:', err);
+                alert('Server connection error during login.');
+            }
+        });
+
+        // Verify existing session token
+        async function verifyTokenAndLoad() {
+            try {
+                const res = await fetch('/api/admin/entry-status', {
+                    headers: { 'Authorization': adminToken }
+                });
+                if (res.ok) {
+                    showDashboard();
+                } else {
+                    sessionStorage.removeItem('adminToken');
+                    adminToken = '';
+                }
+            } catch (err) {
+                console.error('Session validation failed:', err);
+            }
+        }
+
+        function showDashboard() {
+            document.getElementById('loginCard').classList.add('hidden');
+            document.getElementById('adminContent').classList.remove('hidden');
+            checkEntryStatus();
+            fetchScores();
+        }
+
+        // Fetch current Lock Status
+        async function checkEntryStatus() {
+            try {
+                const res = await fetch('/api/admin/entry-status', {
+                    headers: { 'Authorization': adminToken }
+                });
+                const data = await res.json();
+                const badge = document.getElementById('entryStatusBadge');
+                
+                if (data.entriesOpen) {
+                    badge.innerText = "OPEN";
+                    badge.style.backgroundColor = "#dcfce7";
+                    badge.style.color = "#15803d";
+                } else {
+                    badge.innerText = "LOCKED / CLOSED";
+                    badge.style.backgroundColor = "#fee2e2";
+                    badge.style.color = "#b91c1c";
+                }
+            } catch (err) {
+                console.error("Error fetching status:", err);
+            }
+        }
+
+        // Toggle Lock Handler
+        document.getElementById('toggleEntriesBtn').addEventListener('click', async () => {
+            try {
+                const currentRes = await fetch('/api/admin/entry-status', {
+                    headers: { 'Authorization': adminToken }
+                });
+                const currentData = await currentRes.json();
+                const newState = !currentData.entriesOpen;
+
+                const response = await fetch('/api/admin/entry-status', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': adminToken
+                    },
+                    body: JSON.stringify({ entriesOpen: newState })
+                });
+
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    alert(`Entries are now ${newState ? 'OPEN' : 'LOCKED'}`);
+                    checkEntryStatus();
+                } else {
+                    alert("Server rejected update: " + (result.error || result.message || "Unauthorized"));
+                }
+            } catch (err) {
+                console.error("Error toggling entry lock:", err);
+                alert("Failed to update entry status.");
+            }
+        });
+
+        // Fetch scores from server
         async function fetchScores() {
             try {
                 const response = await fetch('/api/challenge-scores');
@@ -75,11 +205,11 @@
                 }
             } catch (err) {
                 console.error(err);
-                alert("Failed to connect to server to fetch scores.");
+                alert("Failed to fetch scores from server.");
             }
         }
 
-        // 2. Render input list based on selected Week
+        // Render Team Score Inputs
         function renderWeekScores() {
             const selectedWeekKey = weekSelect.value;
             container.innerHTML = '';
@@ -102,17 +232,14 @@
             });
         }
 
-        // Handle swapping weeks
         weekSelect.addEventListener('change', renderWeekScores);
 
-        // 3. Handle saving form submissions
+        // Save Weekly Scores
         document.getElementById('adminScoreForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const selectedWeekKey = weekSelect.value;
             const updatedScores = {};
 
-            // Gather values from all input boxes
             document.querySelectorAll('.score-input').forEach(input => {
                 const team = input.getAttribute('data-team');
                 updatedScores[team] = parseInt(input.value) || 0;
@@ -121,7 +248,10 @@
             try {
                 const response = await fetch('/api/challenge-save-scores', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': adminToken
+                    },
                     body: JSON.stringify({
                         week: selectedWeekKey,
                         scores: updatedScores
@@ -131,7 +261,7 @@
                 const result = await response.json();
                 if (result.success) {
                     alert(result.message);
-                    fetchScores(); // Refresh local array to stay synced
+                    fetchScores();
                 } else {
                     alert("Error saving: " + result.message);
                 }
@@ -141,88 +271,39 @@
             }
         });
 
-        // Initial Load
-        fetchScores();
-        
-        // Fetch current entry status on load
-async function checkEntryStatus() {
-    try {
-        const res = await fetch('/api/admin/entry-status');
-        const data = await res.json();
-        const badge = document.getElementById('entryStatusBadge');
-        
-        if (data.entriesOpen) {
-            badge.innerText = "OPEN";
-            badge.style.backgroundColor = "#dcfce7";
-            badge.style.color = "#15803d";
-        } else {
-            badge.innerText = "LOCKED / CLOSED";
-            badge.style.backgroundColor = "#fee2e2";
-            badge.style.color = "#b91c1c";
-        }
-    } catch (err) {
-        console.error(err);
-    }
-}
+        // Master Reset
+        document.getElementById('masterResetBtn').addEventListener('click', async () => {
+            const confirm1 = confirm("WARNING: This will completely delete ALL user entries and wipe all scores back to 0. Are you absolutely sure?");
+            if (!confirm1) return;
 
-// Handle toggling open/closed
-        document.getElementById('toggleEntriesBtn').addEventListener('click', async () => {
+            const confirm2 = confirm("FINAL WARNING: This cannot be undone. Click OK to wipe the 4-Weeks Challenge data.");
+            if (!confirm2) return;
+
             try {
-                const currentRes = await fetch('/api/admin/entry-status');
-                const currentData = await currentRes.json();
-                const newState = !currentData.entriesOpen;
-
-                // Send Base64 encoded password token
-                const token = btoa("admin123:" + Date.now());
-
-                const response = await fetch('/api/admin/entry-status', {
+                const response = await fetch('/api/challenge-master-reset', { 
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': token
-                    },
-                    body: JSON.stringify({ entriesOpen: newState })
+                    headers: { 'Authorization': adminToken }
                 });
-
                 const result = await response.json();
+
                 if (result.success) {
-                    alert(`Entries are now ${newState ? 'OPEN' : 'LOCKED'}`);
-                    checkEntryStatus();
+                    alert(result.message);
+                    fetchScores();
                 } else {
-                    alert("Server rejected update: " + (result.error || result.message || "Unknown error"));
+                    alert("Reset failed: " + result.message);
                 }
             } catch (err) {
-                console.error("Error toggling entry lock:", err);
-                alert("Failed to update entry status. Check browser console for details.");
+                console.error(err);
+                alert("Communication error during master reset.");
             }
         });
 
-// Call status check when page loads
-checkEntryStatus();
-
-        // Handle the Master Reset Button with safety confirmations
-        document.getElementById('masterResetBtn').addEventListener('click', async () => {
-        const confirm1 = confirm("WARNING: This will completely delete ALL user entries and wipe all scores back to 0. Are you absolutely sure?");
-        if (!confirm1) return;
-
-        const confirm2 = confirm("FINAL WARNING: This cannot be undone. Type 'OK' to permanently wipe the 4-Weeks Challenge data.");
-        if (!confirm2) return;
-
-        try {
-            const response = await fetch('/api/challenge-master-reset', { method: 'POST' });
-            const result = await response.json();
-
-        if (result.success) {
-            alert(result.message);
-            fetchScores(); // Refresh the inputs on screen
-        } else {
-            alert("Reset failed: " + result.message);
-        }
-    } catch (err) {
-        console.error(err);
-        alert("Communication error during master reset.");
-    }
-});
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            sessionStorage.removeItem('adminToken');
+            location.reload();
+        });
     </script>
 </body>
 </html>
