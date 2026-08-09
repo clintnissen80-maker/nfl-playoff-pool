@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFL 4-Weeks Challenge - Leaderboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f4f4f9; color: #333; }
+        h1 { text-align: center; color: #0056b3; }
+        .table-responsive { overflow-x: auto; margin-top: 20px; background: white; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 12px 15px; border-bottom: 1px solid #ddd; }
+        th { background-color: #0056b3; color: white; font-weight: bold; }
+        tr:nth-child(even) td { background-color: #f8f9fa; }
+        tr:hover td { background-color: #f1f3f5; }
+        .rank-col { font-weight: bold; width: 50px; text-align: center; }
+        .total-col { font-weight: bold; color: #2E7D32; }
+        .nav-links { text-align: center; margin-top: 20px; }
+        .nav-links a { color: #0056b3; text-decoration: none; margin: 0 10px; }
+    </style>
+</head>
+<body>
+
+    <h1>🏆 NFL First 4-Weeks Challenge Leaderboard 🏆</h1>
+    
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th style="text-align: center;">Rank</th>
+                    <th>Entry Name</th>
+                    <th>Selected Teams</th>
+                    <th>W1</th>
+                    <th>W2</th>
+                    <th>W3</th>
+                    <th>W4</th>
+                    <th>Total Pts</th>
+                    <th>Tiebreaker</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboardBody">
+                <!-- Leaderboard entries dynamically generated here -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="nav-links">
+        <a href="/four-weeks-entry">← Go to Entry Form</a> | 
+    </div>
+
+    <script>
+        async function loadLeaderboard() {
+            try {
+                const response = await fetch('/api/challenge-leaderboard');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const tbody = document.getElementById('leaderboardBody');
+                    tbody.innerHTML = '';
+
+                    if (data.leaderboard.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 30px; color: #777;">No entries submitted yet! Be the first!</td></tr>`;
+                        return;
+                    }
+
+                    data.leaderboard.forEach((row, index) => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td class="rank-col">${index + 1}</td>
+                            <td><strong>${row.entryName}</strong></td>
+                            <td style="font-size: 13px; color: #555;">${row.teams}</td>
+                            <td>${row.w1}</td>
+                            <td>${row.w2}</td>
+                            <td>${row.w3}</td>
+                            <td>${row.w4}</td>
+                            <td class="total-col">${row.totalPoints}</td>
+                            <td style="color: #666; font-size: 13px;">${row.tiebreaker}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    alert("Failed to load leaderboard stats.");
+                }
+            } catch (err) {
+                console.error(err);
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color: red;">Network error connecting to the standings database.</td></tr>`;
+            }
+        }
+
+        // Run instantly on load
+        loadLeaderboard();
+    </script>
+</body>
+</html>

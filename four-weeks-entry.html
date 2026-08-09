@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFL First 4-Weeks Challenge - Entry Form</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f4f4f9; color: #333; }
+        h1, h3 { text-align: center; color: #111; }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; margin: 20px 0; }
+        .team-card { padding: 15px 5px; background: white; border: 2px solid #ccc; border-radius: 6px; text-align: center; font-weight: bold; cursor: pointer; user-select: none; transition: all 0.2s ease; }
+        .team-card:hover { border-color: #666; background-color: #f0f0f0; }
+        .team-card.selected { background-color: #4CAF50; color: white; border-color: #2E7D32; }
+        .form-group { margin: 20px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="number"] { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { display: block; width: 100%; padding: 15px; background-color: #0056b3; color: white; border: none; font-size: 16px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #004085; }
+        #counter { text-align: center; font-weight: bold; margin-bottom: 10px; font-size: 18px; }
+    </style>
+</head>
+<body>
+
+    <h1>🏈 NFL First 4-Weeks Challenge 🏈</h1>
+    <h3>$10 per Entry 4 Entries Max.  Select exactly 6 teams. Their total scores will combine for your grand total through Week 4!</h3>
+    
+    <div id="counter">Teams Selected: <span id="count-num">0</span> / 6</div>
+
+    <form id="challengeForm">
+    <!-- NATIONAL FOOTBALL CONFERENCE (NFC) -->
+    <h2>NFC</h2>
+        <div class="grid-container">
+        <div class="team-card" data-team="DAL">DAL</div>
+        <div class="team-card" data-team="NYG">NYG</div>
+        <div class="team-card" data-team="PHI">PHI</div>
+        <div class="team-card" data-team="WAS">WAS</div>
+    </div>
+
+        <div class="grid-container">
+        <div class="team-card" data-team="CHI">CHI</div>
+        <div class="team-card" data-team="DET">DET</div>
+        <div class="team-card" data-team="GB">GB</div>
+        <div class="team-card" data-team="MIN">MIN</div>
+    </div>
+
+        <div class="grid-container">
+        <div class="team-card" data-team="ATL">ATL</div>
+        <div class="team-card" data-team="CAR">CAR</div>
+        <div class="team-card" data-team="NO">NO</div>
+        <div class="team-card" data-team="TB">TB</div>
+    </div>
+
+        <div class="grid-container">
+        <div class="team-card" data-team="ARI">ARI</div>
+        <div class="team-card" data-team="LAR">LAR</div>
+        <div class="team-card" data-team="SF">SF</div>
+        <div class="team-card" data-team="SEA">SEA</div>
+    </div>
+    
+        <!-- AMERICAN FOOTBALL CONFERENCE (AFC) -->
+    <h2>AFC</h2>
+    
+        <div class="grid-container">
+        <div class="team-card" data-team="BUF">BUF</div>
+        <div class="team-card" data-team="MIA">MIA</div>
+        <div class="team-card" data-team="NE">NE</div>
+        <div class="team-card" data-team="NYJ">NYJ</div>
+    </div>
+
+        <div class="grid-container">
+        <div class="team-card" data-team="BAL">BAL</div>
+        <div class="team-card" data-team="CIN">CIN</div>
+        <div class="team-card" data-team="CLE">CLE</div>
+        <div class="team-card" data-team="PIT">PIT</div>
+    </div>
+        <div class="grid-container">
+        <div class="team-card" data-team="HOU">HOU</div>
+        <div class="team-card" data-team="IND">IND</div>
+        <div class="team-card" data-team="JAX">JAX</div>
+        <div class="team-card" data-team="TEN">TEN</div>
+    </div>
+
+        <div class="grid-container">
+        <div class="team-card" data-team="DEN">DEN</div>
+        <div class="team-card" data-team="KC">KC</div>
+        <div class="team-card" data-team="LV">LV</div>
+        <div class="team-card" data-team="LAC">LAC</div>
+    </div>
+  
+            <div class="form-group">
+            <label for="entryName">Entry Name:</label>
+            <input type="text" id="entryName" required placeholder="e.g., Your_Mama_was_a_snowblower">
+        </div>
+
+        <div class="form-group">
+            <label for="tiebreaker">Tiebreaker: Total points scored by ALL NFL teams combined in Week 4:</label>
+            <input type="number" id="tiebreaker" required placeholder="e.g., 742">
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button type="submit" style="flex: 1;">Submit Challenge Entry</button>
+            <button type="button" id="venmoBtn" style="flex: 1; background-color: #008CFF;">💰 Pay for Entries (Venmo)</button>
+        </div>
+        
+        <div style="text-align: center; margin-top: 15px;">
+            <button type="button" id="viewLeaderboardBtn" style="width: auto; padding: 10px 20px; background-color: #4CAF50; font-size: 14px;">🏆 View Live Leaderboard</button>
+        </div>
+    </form>
+
+    <script>
+        const maxTeams = 6;
+        let selectedTeams = [];
+
+        // Handle clicking team cards (Toggles selections & blocks duplicates completely)
+        document.querySelectorAll('.team-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const team = card.getAttribute('data-team');
+                
+                if (selectedTeams.includes(team)) {
+                    selectedTeams = selectedTeams.filter(t => t !== team);
+                    card.classList.remove('selected');
+                } else {
+                    if (selectedTeams.length >= maxTeams) {
+                        alert("You can only select up to 6 teams!");
+                        return;
+                    }
+                    selectedTeams.push(team);
+                    card.classList.add('selected');
+                }
+                document.getElementById('count-num').innerText = selectedTeams.length;
+            });
+        });
+
+        // Form submission logic connecting to our real server backend
+        document.getElementById('challengeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (selectedTeams.length !== maxTeams) {
+                alert(`Please select exactly ${maxTeams} teams before submitting.`);
+                return;
+            }
+            
+            const payload = {
+                entryName: document.getElementById('entryName').value.trim(),
+                teams: selectedTeams,
+                tiebreaker: parseInt(document.getElementById('tiebreaker').value)
+            };
+
+            try {
+                const response = await fetch('/api/challenge-submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(result.message);
+                    // Reset form and UI selections upon success
+                    document.getElementById('challengeForm').reset();
+                    document.querySelectorAll('.team-card').forEach(card => card.classList.remove('selected'));
+                    selectedTeams = [];
+                    document.getElementById('count-num').innerText = 0;
+                } else {
+                    alert("Error: " + result.message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Failed to submit entry to the server. Is the server running?");
+            }
+        });
+        // Handle the Venmo Payment button click
+        document.getElementById('venmoBtn').addEventListener('click', () => {
+            // Replace 'YourVenmoUsername' with your actual Venmo handle
+            window.open("https://venmo.com/inphaze1", "_blank");
+        });
+        // Handle the Leaderboard button click
+        document.getElementById('viewLeaderboardBtn').addEventListener('click', () => {
+            window.location.href = "/four-weeks-leaderboard";
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFL 4-Weeks Challenge - Admin Panel</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f9; color: #333; }
+        h1 { text-align: center; color: #d32f2f; }
+        .control-group { margin: 20px 0; padding: 15px; background: #fff; border: 1px solid #ccc; border-radius: 4px; }
+        label { font-weight: bold; margin-right: 10px; }
+        select { padding: 8px; font-size: 14px; }
+        .team-row { display: flex; align-items: center; justify-content: space-between; padding: 8px; background: #fff; border-bottom: 1px solid #eee; }
+        .team-row:nth-child(even) { background: #fafafa; }
+        .team-label { font-weight: bold; width: 80px; }
+        .score-input { width: 80px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
+        button { display: block; width: 100%; padding: 15px; background-color: #d32f2f; color: white; border: none; font-size: 16px; font-weight: bold; border-radius: 4px; cursor: pointer; margin-top: 20px; }
+        button:hover { background-color: #b71c1c; }
+        .nav-links { text-align: center; margin-top: 20px; }
+        .nav-links a { color: #0056b3; text-decoration: none; margin: 0 10px; }
+    </style>
+</head>
+<body>
+
+    <h1>🛠️ Admin: NFL First 4-Weeks Challenge</h1>
+    
+    <div class="control-group">
+        <label for="weekSelect">Select Week to Edit:</label>
+        <select id="weekSelect">
+            <option value="week1_pts">Week 1</option>
+            <option value="week2_pts">Week 2</option>
+            <option value="week3_pts">Week 3</option>
+            <option value="week4_pts">Week 4</option>
+        </select>
+    </div>
+
+    <form id="adminScoreForm">
+        <div id="teamsContainer">
+            <!-- Team rows will be dynamically inserted here by JavaScript -->
+        </div>
+        <button type="submit">Save All Weekly Scores</button>
+        <hr style="margin-top: 30px; border: 0; border-top: 1px dashed #ccc;">
+        <button type="button" id="masterResetBtn" style="background-color: #c62828; margin-top: 10px;">⚠️ Master Reset Contest ⚠️</button>
+    </form>
+
+    <div class="nav-links">
+        <a href="/four-weeks-entry">← Go to Entry Form</a> | 
+        <a href="/four-weeks-leaderboard">Go to Leaderboard →</a>
+    </div>
+
+    <script>
+        let allTeamScores = [];
+        const weekSelect = document.getElementById('weekSelect');
+        const container = document.getElementById('teamsContainer');
+
+        // 1. Fetch current scores from server
+        async function fetchScores() {
+            try {
+                const response = await fetch('/api/challenge-scores');
+                const data = await response.json();
+                if (data.success) {
+                    allTeamScores = data.scores;
+                    renderWeekScores();
+                } else {
+                    alert("Error loading scores: " + data.message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Failed to connect to server to fetch scores.");
+            }
+        }
+
+        // 2. Render input list based on selected Week
+        function renderWeekScores() {
+            const selectedWeekKey = weekSelect.value;
+            container.innerHTML = '';
+
+            allTeamScores.forEach(team => {
+                const currentScore = team[selectedWeekKey] || 0;
+                
+                const row = document.createElement('div');
+                row.className = 'team-row';
+                row.innerHTML = `
+                    <span class="team-label">${team.team_tri_code}</span>
+                    <input type="number" 
+                           class="score-input" 
+                           data-team="${team.team_tri_code}" 
+                           value="${currentScore}" 
+                           min="0" 
+                           placeholder="0">
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        // Handle swapping weeks
+        weekSelect.addEventListener('change', renderWeekScores);
+
+        // 3. Handle saving form submissions
+        document.getElementById('adminScoreForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const selectedWeekKey = weekSelect.value;
+            const updatedScores = {};
+
+            // Gather values from all input boxes
+            document.querySelectorAll('.score-input').forEach(input => {
+                const team = input.getAttribute('data-team');
+                updatedScores[team] = parseInt(input.value) || 0;
+            });
+
+            try {
+                const response = await fetch('/api/challenge-save-scores', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        week: selectedWeekKey,
+                        scores: updatedScores
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert(result.message);
+                    fetchScores(); // Refresh local array to stay synced
+                } else {
+                    alert("Error saving: " + result.message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Server communication error while saving.");
+            }
+        });
+
+        // Initial Load
+        fetchScores();
+        
+        // Handle the Master Reset Button with safety confirmations
+        document.getElementById('masterResetBtn').addEventListener('click', async () => {
+        const confirm1 = confirm("WARNING: This will completely delete ALL user entries and wipe all scores back to 0. Are you absolutely sure?");
+        if (!confirm1) return;
+
+        const confirm2 = confirm("FINAL WARNING: This cannot be undone. Type 'OK' to permanently wipe the 4-Weeks Challenge data.");
+        if (!confirm2) return;
+
+        try {
+            const response = await fetch('/api/challenge-master-reset', { method: 'POST' });
+            const result = await response.json();
+
+        if (result.success) {
+            alert(result.message);
+            fetchScores(); // Refresh the inputs on screen
+        } else {
+            alert("Reset failed: " + result.message);
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Communication error during master reset.");
+    }
+});
+    </script>
+</body>
+</html>

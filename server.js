@@ -14,7 +14,59 @@ const SETTINGS_FILE = '/var/data/settings.json';
 // --------------------
 // Database
 // --------------------
-const db = new Database('/var/data/entries.db');
+
+// Use Render's persistent disk path if it exists, otherwise use a local file
+const dbDir = fs.existsSync('/var/data') ? '/var/data' : __dirname;
+const dbPath = path.join(dbDir, 'entries.db');
+
+const db = new Database(dbPath);
+console.log(`Database loaded successfully from: ${dbPath}`);
+
+// ==========================================
+// NFL FIRST 4-WEEKS CHALLENGE TABLES
+// ==========================================
+// 1. Table to store team scores for weeks 1-4
+db.exec(`CREATE TABLE IF NOT EXISTS challenge_scores (
+  team_tri_code TEXT PRIMARY KEY,
+  week1_pts INTEGER DEFAULT 0,
+  week2_pts INTEGER DEFAULT 0,
+  week3_pts INTEGER DEFAULT 0,
+  week4_pts INTEGER DEFAULT 0
+)`);
+
+// 2. Table to store user entries
+db.exec(`CREATE TABLE IF NOT EXISTS challenge_entries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  entry_name TEXT NOT NULL UNIQUE,
+  team1 TEXT NOT NULL,
+  team2 TEXT NOT NULL,
+  team3 TEXT NOT NULL,
+  team4 TEXT NOT NULL,
+  team5 TEXT NOT NULL,
+  team6 TEXT NOT NULL,
+  tiebreaker INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`);
+
+// Seed the 32 NFL teams if the scores table is empty
+const checkTeams = db.prepare("SELECT COUNT(*) as count FROM challenge_scores").get();
+if (checkTeams && checkTeams.count === 0) {
+  const teams = [
+    'ARI','ATL','BAL','BUF','CAR','CHI','CIN','CLE','DAL','DEN','DET','GB',
+    'HOU','IND','JAX','KC','LV','LAC','LAR','MIA','MIN','NE','NO','NYG',
+    'NYJ','PHI','PIT','SF','SEA','TB','TEN','WAS'
+  ];
+  
+  const insertTeam = db.prepare("INSERT INTO challenge_scores (team_tri_code) VALUES (?)");
+  
+  // better-sqlite3 uses a transaction for bulk inserts to keep it fast and safe
+  const insertMany = db.transaction((teamList) => {
+    for (const team of teamList) insertTeam.run(team);
+  });
+  
+  insertMany(teams);
+  console.log("Challenge teams seeded successfully.");
+}
 
 // --------------------
 // DB migration: add paid / notes columns if missing
@@ -451,6 +503,194 @@ app.get('/api/admin/export', requireAdmin, (req, res) => {
   res.header('Content-Type', 'text/csv');
   res.header('Content-Disposition', 'attachment; filename="entries_export.csv"');
   res.send(csv);
+});
+
+// ==========================================
+// NFL FIRST 4-WEEKS CHALLENGE ROUTES
+// ==========================================
+
+// Route to serve the entry page
+app.get('/four-weeks-entry', (req, res) => {
+    res.sendFile(path.join(__dirname, 'four-weeks-entry.html')); 
+    // Note: If your HTML files live inside a "public" or "views" folder, 
+    // change the line above to: res.sendFile(path.join(__dirname, 'public', 'four-weeks-entry.html'));
+});
+
+// Route to serve the public leaderboard page (we will create the HTML for this next)
+app.get('/four-weeks-leaderboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'four-weeks-leaderboard.html'));
+});
+
+// Route to serve the isolated challenge admin page (Obscured URL)
+app.get('/admin/manage-4w-pool-x97q2', (req, res) => {
+    res.sendFile(path.join(__dirname, 'four-weeks-admin.html'));
+});
+
+// API Endpoint to process and save a new challenge entry
+app.post('/api/challenge-submit', (req, res) => {
+    try {
+        const { entryName, teams, tiebreaker } = req.body;
+
+        // 1. Basic Validation
+        if (!entryName || !teams || !Array.isArray(teams) || teams.length !== 6 || !tiebreaker) {
+            return res.status(400).json({ success: false, message: "Missing fields or invalid team selection." });
+        }
+
+        // 2. Server-side Duplicate Check (safety fallback)
+        const uniqueTeams = [...new Set(teams)];
+        if (uniqueTeams.length !== 6) {
+            return res.status(400).json({ success: false, message: "Duplicate teams are not allowed." });
+        }
+
+        // 3. Insert into the database using better-sqlite3 syntax
+        const stmt = db.prepare(`
+            INSERT INTO challenge_entries (entry_name, team1, team2, team3, team4, team5, team6, tiebreaker)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        stmt.run(entryName, teams[0], teams[1], teams[2], teams[3], teams[4], teams[5], tiebreaker);
+
+        // Success response
+        return res.json({ success: true, message: "Entry successfully submitted! Good luck!" });
+
+    } catch (error) {
+        console.error("Database Error during entry submission:", error);
+        
+        // Handle unique name constraint violation
+        if (error.message && error.message.includes('UNIQUE constraint failed')) {
+            return res.status(400).json({ success: false, message: "That Entry Name is already taken. Please choose another!" });
+        }
+        
+        return res.status(500).json({ success: false, message: "Internal server error saving your entry." });
+    }
+});
+
+// API to get all team scores for the admin panel
+app.get('/api/challenge-scores', (req, res) => {
+    try {
+        const scores = db.prepare("SELECT * FROM challenge_scores ORDER BY team_tri_code ASC").all();
+        res.json({ success: true, scores });
+    } catch (error) {
+        console.error("Error fetching challenge scores:", error);
+        res.status(500).json({ success: false, message: "Failed to retrieve team scores." });
+    }
+});
+
+// API to save updated scores for a specific week
+app.post('/api/challenge-save-scores', (req, res) => {
+    try {
+        const { week, scores } = req.body; // week = 'week1_pts', 'week2_pts', etc.
+        
+        // Validation
+        const validWeeks = ['week1_pts', 'week2_pts', 'week3_pts', 'week4_pts'];
+        if (!validWeeks.includes(week) || !scores || typeof scores !== 'object') {
+            return res.status(400).json({ success: false, message: "Invalid week or scores payload." });
+        }
+
+        // Run updates inside a fast transaction
+        const updateStmt = db.prepare(`
+            UPDATE challenge_scores 
+            SET ${week} = ? 
+            WHERE team_tri_code = ?
+        `);
+
+        const updateTransaction = db.transaction((scoreData) => {
+            for (const [team, pts] of Object.entries(scoreData)) {
+                // Ensure we save numbers, default to 0 if blank
+                const pointsValue = parseInt(pts) || 0;
+                updateStmt.run(pointsValue, team);
+            }
+        });
+
+        updateTransaction(scores);
+
+        res.json({ success: true, message: `Successfully updated scores for ${week.replace('_pts', '').toUpperCase()}!` });
+
+    } catch (error) {
+        console.error("Error saving challenge scores:", error);
+        res.status(500).json({ success: false, message: "Failed to save team scores." });
+    }
+});
+
+// API to calculate and fetch the dynamic leaderboard rankings
+app.get('/api/challenge-leaderboard', (req, res) => {
+    try {
+        // 1. Fetch all entries
+        const entries = db.prepare("SELECT * FROM challenge_entries").all();
+        
+        // 2. Fetch all team scores and index them into an easy look-up object
+        const teamRows = db.prepare("SELECT * FROM challenge_scores").all();
+        const teamScoresMap = {};
+        teamRows.forEach(row => {
+            teamScoresMap[row.team_tri_code] = {
+                w1: row.week1_pts,
+                w2: row.week2_pts,
+                w3: row.week3_pts,
+                w4: row.week4_pts
+            };
+        });
+
+        // 3. Loop through every single user entry and compute their weekly totals
+        const leaderboardData = entries.map(entry => {
+            const chosenTeams = [entry.team1, entry.team2, entry.team3, entry.team4, entry.team5, entry.team6];
+            
+            let w1Total = 0;
+            let w2Total = 0;
+            let w3Total = 0;
+            let w4Total = 0;
+
+            // Add up the points scored by each of their 6 locked-in teams
+            chosenTeams.forEach(team => {
+                if (teamScoresMap[team]) {
+                    w1Total += teamScoresMap[team].w1;
+                    w2Total += teamScoresMap[team].w2;
+                    w3Total += teamScoresMap[team].w3;
+                    w4Total += teamScoresMap[team].w4;
+                }
+            });
+
+            const grandTotal = w1Total + w2Total + w3Total + w4Total;
+
+            return {
+                entryName: entry.entry_name,
+                teams: chosenTeams.join(', '),
+                w1: w1Total,
+                w2: w2Total,
+                w3: w3Total,
+                w4: w4Total,
+                totalPoints: grandTotal,
+                tiebreaker: entry.tiebreaker
+            };
+        });
+
+        // 4. Sort from highest points to lowest points
+        leaderboardData.sort((a, b) => b.totalPoints - a.totalPoints);
+
+        res.json({ success: true, leaderboard: leaderboardData });
+
+    } catch (error) {
+        console.error("Error generating leaderboard:", error);
+        res.status(500).json({ success: false, message: "Failed to generate leaderboard." });
+    }
+});
+
+// Admin API to completely reset the 4-Weeks Challenge tables
+app.post('/api/challenge-master-reset', (req, res) => {
+    try {
+        // Clear all entries
+        db.prepare("DELETE FROM challenge_entries").run();
+        
+        // Reset all team scores back to 0
+        db.prepare(`
+            UPDATE challenge_scores 
+            SET week1_pts = 0, week2_pts = 0, week3_pts = 0, week4_pts = 0
+        `).run();
+        
+        res.json({ success: true, message: "Master reset successful! All entries deleted and scores reset to 0." });
+    } catch (error) {
+        console.error("Error executing master reset:", error);
+        res.status(500).json({ success: false, message: "Failed to perform master reset." });
+    }
 });
 
 // --------------------
