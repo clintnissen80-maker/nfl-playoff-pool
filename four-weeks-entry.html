@@ -5,18 +5,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NFL First 4-Weeks Challenge - Entry Form</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #0f172a; color: #f8fafc; }
-        h1, h3 { text-align: center; color: #111; }
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background-color: #0f172a; 
+            color: #f8fafc; 
+        }
+        h1 { text-align: center; color: #ffffff; }
+        h2 { color: #f8fafc; margin-top: 30px; border-bottom: 1px solid #334155; padding-bottom: 5px; }
+        h3 { text-align: center; color: #cbd5e1; font-weight: normal; }
+        
         .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; margin: 20px 0; }
-        .team-card { padding: 15px 5px; background: white; border: 2px solid #ccc; border-radius: 6px; text-align: center; font-weight: bold; cursor: pointer; user-select: none; transition: all 0.2s ease; }
-        .team-card:hover { border-color: #666; background-color: #f0f0f0; }
-        .team-card.selected { background-color: #4CAF50; color: white; border-color: #2E7D32; }
+        
+        /* Team cards styling fixed for dark background */
+        .team-card { 
+            padding: 15px 5px; 
+            background: #1e293b; 
+            color: #f8fafc; 
+            border: 2px solid #475569; 
+            border-radius: 6px; 
+            text-align: center; 
+            font-weight: bold; 
+            cursor: pointer; 
+            user-select: none; 
+            transition: all 0.2s ease; 
+        }
+        .team-card:hover { border-color: #94a3b8; background-color: #334155; }
+        .team-card.selected { background-color: #22c55e; color: #ffffff; border-color: #16a34a; }
+        
         .form-group { margin: 20px 0; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], input[type="number"] { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-        button { display: block; width: 100%; padding: 15px; background-color: #0056b3; color: white; border: none; font-size: 16px; font-weight: bold; border-radius: 4px; cursor: pointer; }
-        button:hover { background-color: #004085; }
-        #counter { text-align: center; font-weight: bold; margin-bottom: 10px; font-size: 18px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #f8fafc; }
+        input[type="text"], input[type="number"] { 
+            width: 100%; 
+            padding: 10px; 
+            box-sizing: border-box; 
+            border: 1px solid #475569; 
+            border-radius: 4px; 
+            background-color: #020617; 
+            color: #ffffff; 
+        }
+        input[type="text"]::placeholder, input[type="number"]::placeholder { color: #64748b; }
+        
+        button { display: block; width: 100%; padding: 15px; background-color: #2563eb; color: white; border: none; font-size: 16px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #1d4ed8; }
+        #counter { text-align: center; font-weight: bold; margin-bottom: 10px; font-size: 18px; color: #38bdf8; }
     </style>
 </head>
 <body>
