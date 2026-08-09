@@ -23,6 +23,14 @@
 <body>
 
     <h1>🛠️ Admin: NFL First 4-Weeks Challenge</h1>
+
+    <div class="control-group" style="border-left: 5px solid #2563eb; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <strong>Contest Entry Status:</strong> 
+        <span id="entryStatusBadge" style="padding: 4px 8px; border-radius: 4px; font-weight: bold;">Loading...</span>
+    </div>
+    <button type="button" id="toggleEntriesBtn" style="width: auto; margin-top: 0; padding: 8px 16px; background-color: #2563eb;">Toggle Lock</button>
+</div>
     
     <div class="control-group">
         <label for="weekSelect">Select Week to Edit:</label>
@@ -136,6 +144,57 @@
         // Initial Load
         fetchScores();
         
+        // Fetch current entry status on load
+async function checkEntryStatus() {
+    try {
+        const res = await fetch('/api/admin/entry-status');
+        const data = await res.json();
+        const badge = document.getElementById('entryStatusBadge');
+        
+        if (data.entriesOpen) {
+            badge.innerText = "OPEN";
+            badge.style.backgroundColor = "#dcfce7";
+            badge.style.color = "#15803d";
+        } else {
+            badge.innerText = "LOCKED / CLOSED";
+            badge.style.backgroundColor = "#fee2e2";
+            badge.style.color = "#b91c1c";
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+// Handle toggling open/closed
+document.getElementById('toggleEntriesBtn').addEventListener('click', async () => {
+    try {
+        const currentRes = await fetch('/api/admin/entry-status');
+        const currentData = await currentRes.json();
+        const newState = !currentData.entriesOpen;
+
+        const response = await fetch('/api/admin/entry-status', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': 'Basic ' + btoa('admin123') 
+            },
+            body: JSON.stringify({ entriesOpen: newState })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            alert(`Entries are now ${newState ? 'OPEN' : 'LOCKED'}`);
+            checkEntryStatus();
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Failed to update entry status.");
+    }
+});
+
+// Call status check when page loads
+checkEntryStatus();
+
         // Handle the Master Reset Button with safety confirmations
         document.getElementById('masterResetBtn').addEventListener('click', async () => {
         const confirm1 = confirm("WARNING: This will completely delete ALL user entries and wipe all scores back to 0. Are you absolutely sure?");

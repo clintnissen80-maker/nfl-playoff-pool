@@ -56,7 +56,7 @@
 <body>
 
     <h1>🏈 NFL First 4-Weeks Challenge 🏈</h1>
-    <h3>$10 per Entry 4 Entries Max.  Select exactly 6 teams. Their total scores will combine for your grand total through Week 4!</h3>
+    <h3>$10 per Entry 4 Entries Max.  Select exactly 6 teams. Their total scores will combine for your total score through Week 4!  Any unpaid entries will be deleted prior to the first kickoff.</h3>
     
     <div id="counter">Teams Selected: <span id="count-num">0</span> / 6</div>
 
@@ -144,6 +144,27 @@
     <script>
         const maxTeams = 6;
         let selectedTeams = [];
+
+        // Check if entries are open when the entry page loads
+        async function checkStatusOnLoad() {
+            try {
+                const res = await fetch('/api/entry-status');
+                const data = await res.json();
+                
+                if (!data.entriesOpen) {
+                    const submitBtn = document.querySelector('button[type="submit"]');
+                    submitBtn.disabled = true;
+                    submitBtn.style.backgroundColor = "#64748b";
+                    submitBtn.style.cursor = "not-allowed";
+                    submitBtn.innerText = "🔒 Entries are Closed";
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // Run the lock check immediately on load
+        checkStatusOnLoad();
 
         // Handle clicking team cards (Toggles selections & blocks duplicates completely)
         document.querySelectorAll('.team-card').forEach(card => {

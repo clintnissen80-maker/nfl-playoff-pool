@@ -543,6 +543,12 @@ app.get('/admin/manage-4w-pool-x97q2.html', (req, res) => {
 // API Endpoint to process and save a new challenge entry
 app.post('/api/challenge-submit', (req, res) => {
     try {
+        // 0. Check if entries are open
+        const settings = getSettings();
+        if (!settings.entriesOpen) {
+            return res.status(403).json({ success: false, message: "Entries are currently CLOSED for the 4-Weeks Challenge." });
+        }
+
         const { entryName, teams, tiebreaker } = req.body;
 
         // 1. Basic Validation
