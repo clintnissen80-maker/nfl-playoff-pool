@@ -48,6 +48,13 @@ db.exec(`CREATE TABLE IF NOT EXISTS challenge_entries (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )`);
 
+// Add paid status column if missing
+try {
+  db.prepare(`ALTER TABLE challenge_entries ADD COLUMN paid INTEGER DEFAULT 0`).run();
+} catch (e) {
+  // column already exists
+}
+
 // Seed the 32 NFL teams if the scores table is empty
 const checkTeams = db.prepare("SELECT COUNT(*) as count FROM challenge_scores").get();
 if (checkTeams && checkTeams.count === 0) {
@@ -697,6 +704,46 @@ app.post('/api/challenge-master-reset', (req, res) => {
     } catch (error) {
         console.error("Error executing master reset:", error);
         res.status(500).json({ success: false, message: "Failed to perform master reset." });
+    }
+});
+
+// Manage Entries Page Route
+app.get('/admin/manage-4w-entries', (req, res) => {
+    res.sendFile(path.join(__dirname, 'four-weeks-manage.html'));
+});
+
+// API: Get all challenge entries for management
+app.get('/api/challenge-entries', (req, res) => {
+    try {
+        const entries = db.prepare("SELECT * FROM challenge_entries ORDER BY id DESC").all();
+        res.json({ success: true, entries });
+    } catch (error) {
+        console.error("Error fetching challenge entries:", error);
+        res.status(500).json({ success: false, message: "Failed to fetch entries." });
+    }
+});
+
+// API: Toggle payment status (1 = paid, 0 = unpaid)
+app.post('/api/challenge-toggle-paid', (req, res) => {
+    try {
+        const { id, paid } = req.body;
+        db.prepare("UPDATE challenge_entries SET paid = ? WHERE id = ?").run(paid ? 1 : 0, id);
+        res.json({ success: true, message: "Payment status updated." });
+    } catch (error) {
+        console.error("Error updating payment status:", error);
+        res.status(500).json({ success: false, message: "Failed to update payment status." });
+    }
+});
+
+// API: Manually delete an entry
+app.delete('/api/challenge-delete-entry/:id', (req, res) => {
+    try {
+        const { id } = req.params;
+        db.prepare("DELETE FROM challenge_entries WHERE id = ?").run(id);
+        res.json({ success: true, message: "Entry successfully deleted." });
+    } catch (error) {
+        console.error("Error deleting entry:", error);
+        res.status(500).json({ success: false, message: "Failed to delete entry." });
     }
 });
 

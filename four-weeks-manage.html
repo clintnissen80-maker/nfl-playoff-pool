@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage 4-Weeks Entries</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f4f4f9; color: #333; }
+        h1 { text-align: center; color: #0056b3; }
+        .table-responsive { overflow-x: auto; margin-top: 20px; background: white; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 12px 15px; border-bottom: 1px solid #ddd; }
+        th { background-color: #0056b3; color: white; font-weight: bold; }
+        tr:nth-child(even) td { background-color: #f8f9fa; }
+        .paid-row { background-color: #e8f5e9 !important; }
+        .delete-btn { background-color: #d32f2f; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .delete-btn:hover { background-color: #b71c1c; }
+        .nav-links { text-align: center; margin-top: 20px; }
+        .nav-links a { color: #0056b3; text-decoration: none; margin: 0 10px; }
+        .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .status-paid { background: #c8e6c9; color: #2e7d32; }
+        .status-unpaid { background: #ffcdd2; color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1>📋 Manage Challenge Entries</h1>
+
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Entry Name</th>
+                    <th>Teams</th>
+                    <th>Tiebreaker</th>
+                    <th style="text-align: center;">Paid?</th>
+                    <th style="text-align: center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="entriesBody">
+                <!-- Entries loaded via JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="nav-links">
+        <a href="/admin/manage-4w-pool-x97q2">← Back to Admin Panel</a> | 
+        <a href="/four-weeks-leaderboard">View Leaderboard →</a>
+    </div>
+
+    <script>
+        async function loadEntries() {
+            try {
+                const response = await fetch('/api/challenge-entries');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const tbody = document.getElementById('entriesBody');
+                    tbody.innerHTML = '';
+
+                    if (data.entries.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 30px; color: #777;">No entries submitted yet.</td></tr>`;
+                        return;
+                    }
+
+                    data.entries.forEach(entry => {
+                        const teams = [entry.team1, entry.team2, entry.team3, entry.team4, entry.team5, entry.team6].join(', ');
+                        const isPaid = entry.paid === 1;
+
+                        const tr = document.createElement('tr');
+                        if (isPaid) tr.className = 'paid-row';
+
+                        tr.innerHTML = `
+                            <td><strong>${entry.entry_name}</strong></td>
+                            <td style="font-size: 13px; color: #555;">${teams}</td>
+                            <td>${entry.tiebreaker}</td>
+                            <td style="text-align: center;">
+                                <input type="checkbox" ${isPaid ? 'checked' : ''} onchange="togglePaid(${entry.id}, this.checked)">
+                                <span class="status-badge ${isPaid ? 'status-paid' : 'status-unpaid'}">${isPaid ? 'PAID' : 'UNPAID'}</span>
+                            </td>
+                            <td style="text-align: center;">
+                                <button class="delete-btn" onclick="deleteEntry(${entry.id}, '${entry.entry_name}')">Delete</button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Error loading entries list.");
+            }
+        }
+
+        async function togglePaid(id, paid) {
+            try {
+                const response = await fetch('/api/challenge-toggle-paid', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, paid })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    loadEntries();
+                } else {
+                    alert("Error updating payment status.");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Network error updating payment status.");
+            }
+        }
+
+        async function deleteEntry(id, name) {
+            if (!confirm(`Are you sure you want to permanently delete the entry "${name}"?`)) return;
+
+            try {
+                const response = await fetch(`/api/challenge-delete-entry/${id}`, { method: 'DELETE' });
+                const result = await response.json();
+                if (result.success) {
+                    loadEntries();
+                } else {
+                    alert("Error deleting entry.");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Network error deleting entry.");
+            }
+        }
+
+        loadEntries();
+    </script>
+</body>
+</html>
