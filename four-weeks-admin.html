@@ -166,31 +166,34 @@ async function checkEntryStatus() {
 }
 
 // Handle toggling open/closed
-document.getElementById('toggleEntriesBtn').addEventListener('click', async () => {
-    try {
-        const currentRes = await fetch('/api/admin/entry-status');
-        const currentData = await currentRes.json();
-        const newState = !currentData.entriesOpen;
+        document.getElementById('toggleEntriesBtn').addEventListener('click', async () => {
+            try {
+                const currentRes = await fetch('/api/admin/entry-status');
+                const currentData = await currentRes.json();
+                const newState = !currentData.entriesOpen;
 
-        const response = await fetch('/api/admin/entry-status', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': 'Basic ' + btoa('admin123') 
-            },
-            body: JSON.stringify({ entriesOpen: newState })
+                // Send request with direct admin credentials
+                const response = await fetch('/api/admin/entry-status', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': btoa('admin:admin123') 
+                    },
+                    body: JSON.stringify({ entriesOpen: newState })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert(`Entries are now ${newState ? 'OPEN' : 'LOCKED'}`);
+                    checkEntryStatus();
+                } else {
+                    alert("Server rejected update: " + (result.error || result.message || "Unknown error"));
+                }
+            } catch (err) {
+                console.error("Error toggling entry lock:", err);
+                alert("Failed to update entry status. Check browser console for details.");
+            }
         });
-
-        const result = await response.json();
-        if (result.success) {
-            alert(`Entries are now ${newState ? 'OPEN' : 'LOCKED'}`);
-            checkEntryStatus();
-        }
-    } catch (err) {
-        console.error(err);
-        alert("Failed to update entry status.");
-    }
-});
 
 // Call status check when page loads
 checkEntryStatus();
