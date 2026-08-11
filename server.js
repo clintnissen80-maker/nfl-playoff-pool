@@ -141,6 +141,9 @@ function getSettings() {
   
   return settings;
 }
+function saveSettings(settings) {
+  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
+}
 
 // --------------------
 // Middleware
@@ -153,20 +156,26 @@ app.use(express.static(path.join(__dirname, 'public')));
 // --------------------
 function requireAdmin(req, res, next) {
   const token = req.headers.authorization;
-  if (!token) return res.status(403).json({ error: "Admin only" });
+  if (!token) return res.status(403).json({ error: "Admin token missing" });
 
   try {
-    // Strip "Bearer " or "Basic " prefixes if present
     const cleanToken = token.replace(/^(Bearer|Basic)\s+/i, '').trim();
-    const decoded = Buffer.from(cleanToken, "base64").toString('utf8');
     const adminPass = process.env.ADMIN_PASSWORD || "admin123";
 
-    if (decoded.includes(adminPass) || cleanToken === adminPass) {
+    // 1. Direct password match
+    if (cleanToken === adminPass) {
       return next();
     }
-    throw new Error("Invalid token credential");
+
+    // 2. Base64 decoded match
+    const decoded = Buffer.from(cleanToken, "base64").toString('utf8');
+    if (decoded === adminPass || decoded.includes(adminPass)) {
+      return next();
+    }
+
+    return res.status(403).json({ error: "Invalid admin password" });
   } catch (err) {
-    return res.status(403).json({ error: "Invalid token" });
+    return res.status(403).json({ error: "Invalid token encoding" });
   }
 }
 
@@ -352,15 +361,6 @@ app.get('/api/entry-status', (req, res) => res.json(getSettings()));
 // --------------------
 // Admin Endpoints
 // --------------------
-app.get('/api/admin/entry-status', (req, res) => res.json(getSettings()));
-
-app.post('/api/admin/entry-status', requireAdmin, (req, res) => {
-  const { entriesOpen } = req.body;
-  const settings = getSettings();
-  settings.entriesOpen = !!entriesOpen;
-  saveSettings(settings);
-  res.json({ success: true });
-});
 
 app.post('/api/admin/entry-payment', requireAdmin, (req, res) => {
   const { entryId, paid } = req.body;
@@ -521,27 +521,6 @@ app.get('/api/admin/export', requireAdmin, (req, res) => {
 // ==========================================
 
 // --------------------
-// Admin Security Middleware
-// --------------------
-function requireAdmin(req, res, next) {
-  const token = req.headers.authorization;
-  if (!token) return res.status(403).json({ error: "Admin token missing" });
-
-  try {
-    const cleanToken = token.replace(/^(Bearer|Basic)\s+/i, '').trim();
-    const decoded = Buffer.from(cleanToken, "base64").toString('utf8');
-    const adminPass = process.env.ADMIN_PASSWORD || "admin123";
-
-    if (decoded === adminPass || decoded.includes(adminPass)) {
-      return next();
-    }
-    return res.status(403).json({ error: "Invalid admin password" });
-  } catch (err) {
-    return res.status(403).json({ error: "Invalid token encoding" });
-  }
-}
-
-// --------------------
 // Admin Entry Lock Status Endpoints
 // --------------------
 
@@ -610,7 +589,7 @@ app.post('/api/challenge-submit', (req, res) => {
     try {
         // 0. Check if entries are open
         const settings = getSettings();
-        if (!settings.entriesOpen) {
+        if (!settings.challengeEntriesOpen) {
             return res.status(403).json({ success: false, message: "Entries are currently CLOSED for the 4-Weeks Challenge." });
         }
 
@@ -662,7 +641,7 @@ app.get('/api/challenge-scores', (req, res) => {
 });
 
 // API to save updated scores for a specific week
-app.post('/api/challenge-save-scores', (req, res) => {
+app.post('/api/challenge-save-scores', requireAdmin, (req, res) => {
     try {
         const { week, scores } = req.body; // week = 'week1_pts', 'week2_pts', etc.
         
@@ -770,7 +749,7 @@ app.get('/api/challenge-leaderboard', (req, res) => {
 });
 
 // Admin API to completely reset the 4-Weeks Challenge tables
-app.post('/api/challenge-master-reset', (req, res) => {
+app.post('/api/challenge-master-reset', requireAdmin, (req, res) => {
     try {
         // Clear all entries
         db.prepare("DELETE FROM challenge_entries").run();
@@ -805,7 +784,7 @@ app.get('/api/challenge-entries', (req, res) => {
 });
 
 // API: Toggle payment status (1 = paid, 0 = unpaid)
-app.post('/api/challenge-toggle-paid', (req, res) => {
+app.post('/api/challenge-toggle-paid', requireAdmin, (req, res) => {
     try {
         const { id, paid } = req.body;
         db.prepare("UPDATE challenge_entries SET paid = ? WHERE id = ?").run(paid ? 1 : 0, id);
@@ -817,7 +796,7 @@ app.post('/api/challenge-toggle-paid', (req, res) => {
 });
 
 // API: Manually delete an entry
-app.delete('/api/challenge-delete-entry/:id', (req, res) => {
+app.delete('/api/challenge-delete-entry/:id', requireAdmin, (req, res) => {
     try {
         const { id } = req.params;
         db.prepare("DELETE FROM challenge_entries WHERE id = ?").run(id);

@@ -228,28 +228,44 @@
   }
 
   async function setEntries(open) {
-    const confirmText = open
-      ? "Open entries to the public?"
-      : "Close entries? No new submissions will be allowed.";
+  const confirmText = open
+    ? "Open entries to the public?"
+    : "Close entries? No new submissions will be allowed.";
 
-    if (!confirm(confirmText)) return;
+  if (!confirm(confirmText)) return;
 
+  // Read token from either storage location
+  const authToken = localStorage.getItem("adminToken") || sessionStorage.getItem("adminToken");
+
+  if (!authToken) {
+    alert("Admin session expired. Please log in again.");
+    window.location.href = "/admin-login.html";
+    return;
+  }
+
+  try {
     const res = await fetch("/api/admin/entry-status", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": token
+        "Authorization": authToken
       },
       body: JSON.stringify({ entriesOpen: open })
     });
 
-    if (!res.ok) {
-      alert("Failed to update entry status.");
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      alert("Failed to update entry status: " + (data.error || data.message || "Unauthorized"));
       return;
     }
 
     loadEntryStatus();
+  } catch (err) {
+    console.error("Error updating status:", err);
+    alert("Server communication error.");
   }
+}
 
   async function exportCSV() {
     if (!token) {
