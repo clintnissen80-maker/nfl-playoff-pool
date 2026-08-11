@@ -684,6 +684,10 @@ app.post('/api/challenge-save-scores', (req, res) => {
 // API to calculate and fetch the dynamic leaderboard rankings
 app.get('/api/challenge-leaderboard', (req, res) => {
     try {
+        // Check lock status from settings
+        const settings = getSettings();
+        const isLocked = !settings.entriesOpen;
+
         // 1. Fetch all entries
         const entries = db.prepare("SELECT * FROM challenge_entries").all();
         
@@ -722,7 +726,8 @@ app.get('/api/challenge-leaderboard', (req, res) => {
 
             return {
                 entryName: entry.entry_name,
-                teams: chosenTeams.join(', '),
+                // ONLY include team picks if entries are locked/closed!
+                teams: isLocked ? chosenTeams.join(', ') : '',
                 w1: w1Total,
                 w2: w2Total,
                 w3: w3Total,
@@ -735,7 +740,12 @@ app.get('/api/challenge-leaderboard', (req, res) => {
         // 4. Sort from highest points to lowest points
         leaderboardData.sort((a, b) => b.totalPoints - a.totalPoints);
 
-        res.json({ success: true, leaderboard: leaderboardData });
+        // Return leaderboard along with entriesOpen state
+        res.json({ 
+            success: true, 
+            entriesOpen: settings.entriesOpen, 
+            leaderboard: leaderboardData 
+        });
 
     } catch (error) {
         console.error("Error generating leaderboard:", error);

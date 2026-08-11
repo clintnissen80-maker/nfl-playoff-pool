@@ -26,18 +26,18 @@
     <div class="table-responsive">
         <table>
             <thead>
-                <tr>
-                    <th style="text-align: center;">Rank</th>
-                    <th>Entry Name</th>
-                    <th>Selected Teams</th>
-                    <th>W1</th>
-                    <th>W2</th>
-                    <th>W3</th>
-                    <th>W4</th>
-                    <th>Total Pts</th>
-                    <th>Tiebreaker</th>
-                </tr>
-            </thead>
+    <tr>
+        <th style="text-align: center;">Rank</th>
+        <th>Entry Name</th>
+        <th id="teamsHeader">Selected Teams</th>
+        <th>W1</th>
+        <th>W2</th>
+        <th>W3</th>
+        <th>W4</th>
+        <th>Total Pts</th>
+        <th>Tiebreaker</th>
+    </tr>
+</thead>
             <tbody id="leaderboardBody">
                 <!-- Leaderboard entries dynamically generated here -->
             </tbody>
@@ -50,42 +50,60 @@
 
     <script>
         async function loadLeaderboard() {
-            try {
-                const response = await fetch('/api/challenge-leaderboard');
-                const data = await response.json();
-                
-                if (data.success) {
-                    const tbody = document.getElementById('leaderboardBody');
-                    tbody.innerHTML = '';
+    try {
+        const response = await fetch('/api/challenge-leaderboard');
+        const data = await response.json();
+        
+        if (data.success) {
+            const tbody = document.getElementById('leaderboardBody');
+            const teamsHeader = document.getElementById('teamsHeader');
+            tbody.innerHTML = '';
 
-                    if (data.leaderboard.length === 0) {
-                        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 30px; color: #777;">No entries submitted yet! Be the first!</td></tr>`;
-                        return;
-                    }
-
-                    data.leaderboard.forEach((row, index) => {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td class="rank-col">${index + 1}</td>
-                            <td><strong>${row.entryName}</strong></td>
-                            <td style="font-size: 13px; color: #555;">${row.teams}</td>
-                            <td>${row.w1}</td>
-                            <td>${row.w2}</td>
-                            <td>${row.w3}</td>
-                            <td>${row.w4}</td>
-                            <td class="total-col">${row.totalPoints}</td>
-                            <td style="color: #666; font-size: 13px;">${row.tiebreaker}</td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
-                } else {
-                    alert("Failed to load leaderboard stats.");
-                }
-            } catch (err) {
-                console.error(err);
-                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color: red;">Network error connecting to the standings database.</td></tr>`;
+            // 1. Toggle header column visibility based on entriesOpen status
+            if (teamsHeader) {
+                teamsHeader.style.display = data.entriesOpen ? 'none' : '';
             }
+
+            // 2. Handle empty state (adjust colspan depending on visible columns)
+            if (data.leaderboard.length === 0) {
+                const colSpanCount = data.entriesOpen ? 8 : 9;
+                tbody.innerHTML = `<tr><td colspan="${colSpanCount}" style="text-align:center; padding: 30px; color: #777;">No entries submitted yet! Be the first!</td></tr>`;
+                return;
+            }
+
+            // 3. Render rows
+            data.leaderboard.forEach((row, index) => {
+                const tr = document.createElement('tr');
+
+                // Omit teams cell entirely if entries are open
+                const teamsCell = data.entriesOpen 
+                    ? '' 
+                    : `<td style="font-size: 13px; color: #555;">${row.teams}</td>`;
+
+                tr.innerHTML = `
+                    <td class="rank-col">${index + 1}</td>
+                    <td><strong>${row.entryName}</strong></td>
+                    ${teamsCell}
+                    <td>${row.w1}</td>
+                    <td>${row.w2}</td>
+                    <td>${row.w3}</td>
+                    <td>${row.w4}</td>
+                    <td class="total-col">${row.totalPoints}</td>
+                    <td style="color: #666; font-size: 13px;">${row.tiebreaker}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            alert("Failed to load leaderboard stats.");
         }
+    } catch (err) {
+        console.error(err);
+        const tbody = document.getElementById('leaderboardBody');
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color: red;">Network error connecting to the standings database.</td></tr>`;
+        }
+    }
+}
 
         // Run instantly on load
         loadLeaderboard();
