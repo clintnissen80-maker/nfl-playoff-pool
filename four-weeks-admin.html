@@ -96,7 +96,7 @@
             const token = btoa(pass);
 
             try {
-                const res = await fetch('/api/admin/entry-status', {
+                const res = await fetch('/api/admin/challenge-entry-status', {
                     headers: { 'Authorization': token }
                 });
 
@@ -117,7 +117,7 @@
         // Verify existing session token
         async function verifyTokenAndLoad() {
             try {
-                const res = await fetch('/api/admin/entry-status', {
+                const res = await fetch('/api/admin/challenge-entry-status', {
                     headers: { 'Authorization': adminToken }
                 });
                 if (res.ok) {
@@ -141,7 +141,7 @@
         // Fetch current Lock Status
         async function checkEntryStatus() {
             try {
-                const res = await fetch('/api/admin/entry-status', {
+                const res = await fetch('/api/admin/challenge-entry-status', {
                     headers: { 'Authorization': adminToken }
                 });
                 const data = await res.json();
@@ -164,13 +164,13 @@
         // Toggle Lock Handler
         document.getElementById('toggleEntriesBtn').addEventListener('click', async () => {
             try {
-                const currentRes = await fetch('/api/admin/entry-status', {
+                const currentRes = await fetch('/api/admin/challenge-entry-status', {
                     headers: { 'Authorization': adminToken }
                 });
                 const currentData = await currentRes.json();
                 const newState = !currentData.entriesOpen;
 
-                const response = await fetch('/api/admin/entry-status', {
+                const response = await fetch('/api/admin/challenge-entry-status', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',

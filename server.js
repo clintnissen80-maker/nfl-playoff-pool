@@ -128,17 +128,18 @@ db.prepare(`
 // --------------------
 function getSettings() {
   if (!fs.existsSync(SETTINGS_FILE)) {
-    return { entriesOpen: true };
+    return { 
+      entriesOpen: true,          // Controls the Playoff Pool
+      challengeEntriesOpen: true   // Controls the 4-Weeks Challenge
+    };
   }
-  return JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
-}
-
-function saveSettings(settings) {
-  fs.writeFileSync(
-    SETTINGS_FILE,
-    JSON.stringify(settings, null, 2),
-    'utf8'
-  );
+  const settings = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
+  
+  // Ensure default fallbacks if older settings file exists
+  if (settings.entriesOpen === undefined) settings.entriesOpen = true;
+  if (settings.challengeEntriesOpen === undefined) settings.challengeEntriesOpen = true;
+  
+  return settings;
 }
 
 // --------------------
@@ -268,7 +269,7 @@ app.get('/api/players', (req, res) => {
 // --------------------
 app.post('/api/entries', (req, res) => {
   const settings = getSettings();
-  if (!settings.entriesOpen) {
+  if (!settings.challengeEntriesOpen) {
     return res.status(403).json({ error: 'Entries are currently closed' });
   }
 
@@ -544,21 +545,20 @@ function requireAdmin(req, res, next) {
 // Admin Entry Lock Status Endpoints
 // --------------------
 // Check lock status (requires password token)
-app.get('/api/admin/entry-status', requireAdmin, (req, res) => {
+// Admin Entry Lock Status Endpoints for 4-Weeks Challenge
+app.get('/api/admin/challenge-entry-status', requireAdmin, (req, res) => {
     const settings = getSettings();
-    res.json({ entriesOpen: settings.entriesOpen });
+    res.json({ entriesOpen: settings.challengeEntriesOpen });
 });
 
-// Toggle lock status (requires password token)
-app.post('/api/admin/entry-status', requireAdmin, (req, res) => {
+app.post('/api/admin/challenge-entry-status', requireAdmin, (req, res) => {
     const { entriesOpen } = req.body;
     
-    // Read current settings file, update entriesOpen, and save back to disk
     const settings = getSettings();
-    settings.entriesOpen = entriesOpen;
-    saveSettings(settings); // Saves to your JSON or DB settings file
+    settings.challengeEntriesOpen = !!entriesOpen;
+    saveSettings(settings);
 
-    res.json({ success: true, entriesOpen: settings.entriesOpen });
+    res.json({ success: true, entriesOpen: settings.challengeEntriesOpen });
 });
 
 // --------------------
@@ -686,7 +686,7 @@ app.get('/api/challenge-leaderboard', (req, res) => {
     try {
         // Check lock status from settings
         const settings = getSettings();
-        const isLocked = !settings.entriesOpen;
+        const isLocked = !settings.challengeEntriesOpen;
 
         // 1. Fetch all entries
         const entries = db.prepare("SELECT * FROM challenge_entries").all();
@@ -743,7 +743,7 @@ app.get('/api/challenge-leaderboard', (req, res) => {
         // Return leaderboard along with entriesOpen state
         res.json({ 
             success: true, 
-            entriesOpen: settings.entriesOpen, 
+            entriesOpen: settings.challengeEntriesOpen, 
             leaderboard: leaderboardData 
         });
 
