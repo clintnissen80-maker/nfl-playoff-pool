@@ -544,8 +544,24 @@ function requireAdmin(req, res, next) {
 // --------------------
 // Admin Entry Lock Status Endpoints
 // --------------------
-// Check lock status (requires password token)
-// Admin Entry Lock Status Endpoints for 4-Weeks Challenge
+
+// 1. Playoff Pool Lock Endpoints
+app.get('/api/admin/entry-status', requireAdmin, (req, res) => {
+    const settings = getSettings();
+    res.json({ entriesOpen: settings.entriesOpen });
+});
+
+app.post('/api/admin/entry-status', requireAdmin, (req, res) => {
+    const { entriesOpen } = req.body;
+    
+    const settings = getSettings();
+    settings.entriesOpen = !!entriesOpen;
+    saveSettings(settings);
+
+    res.json({ success: true, entriesOpen: settings.entriesOpen });
+});
+
+// 2. 4-Weeks Challenge Lock Endpoints
 app.get('/api/admin/challenge-entry-status', requireAdmin, (req, res) => {
     const settings = getSettings();
     res.json({ entriesOpen: settings.challengeEntriesOpen });
