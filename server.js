@@ -278,7 +278,7 @@ app.get('/api/players', (req, res) => {
 // --------------------
 app.post('/api/entries', (req, res) => {
   const settings = getSettings();
-  if (!settings.challengeEntriesOpen) {
+  if (!settings.entriesOpen) {
     return res.status(403).json({ error: 'Entries are currently closed' });
   }
 
