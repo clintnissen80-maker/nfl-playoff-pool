@@ -50,8 +50,11 @@
 
     <script>
         async function loadEntries() {
+            const adminToken = sessionStorage.getItem('adminToken') || '';
             try {
-                const response = await fetch('/api/challenge-entries');
+                const response = await fetch('/api/challenge-entries', {
+                    headers: { 'Authorization': adminToken }
+                });
                 const data = await response.json();
                 
                 if (data.success) {
@@ -92,10 +95,14 @@
         }
 
         async function togglePaid(id, paid) {
+            const adminToken = sessionStorage.getItem('adminToken') || '';
             try {
                 const response = await fetch('/api/challenge-toggle-paid', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': adminToken
+                    },
                     body: JSON.stringify({ id, paid })
                 });
                 const result = await response.json();
@@ -113,8 +120,12 @@
         async function deleteEntry(id, name) {
             if (!confirm(`Are you sure you want to permanently delete the entry "${name}"?`)) return;
 
+            const adminToken = sessionStorage.getItem('adminToken') || '';
             try {
-                const response = await fetch(`/api/challenge-delete-entry/${id}`, { method: 'DELETE' });
+                const response = await fetch(`/api/challenge-delete-entry/${id}`, { 
+                    method: 'DELETE',
+                    headers: { 'Authorization': adminToken }
+                });
                 const result = await response.json();
                 if (result.success) {
                     loadEntries();

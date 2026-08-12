@@ -187,7 +187,7 @@
         // Check if entries are open when the entry page loads
         async function checkStatusOnLoad() {
             try {
-                const res = await fetch('/api/entry-status');
+                const res = await fetch('/api/admin/challenge-entry-status');
                 const data = await res.json();
                 
                 if (!data.entriesOpen) {
