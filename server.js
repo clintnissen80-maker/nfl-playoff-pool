@@ -356,7 +356,13 @@ for (const entry of rows) {
   res.json(rows);
 });
 
-app.get('/api/entry-status', (req, res) => res.json(getSettings()));
+app.get('/api/entry-status', (req, res) => {
+    const settings = getSettings();
+    res.json({ 
+        entriesOpen: settings.entriesOpen, 
+        challengeEntriesOpen: settings.challengeEntriesOpen 
+    });
+});
 
 // --------------------
 // Admin Endpoints

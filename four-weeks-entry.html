@@ -185,22 +185,25 @@
         let selectedTeams = [];
 
         // Check if entries are open when the entry page loads
-        async function checkStatusOnLoad() {
-            try {
-                const res = await fetch('/api/admin/challenge-entry-status');
-                const data = await res.json();
-                
-                if (!data.entriesOpen) {
-                    const submitBtn = document.querySelector('button[type="submit"]');
-                    submitBtn.disabled = true;
-                    submitBtn.style.backgroundColor = "#64748b";
-                    submitBtn.style.cursor = "not-allowed";
-                    submitBtn.innerText = "🔒 Entries are Closed";
-                }
-            } catch (err) {
-                console.error(err);
+async function checkStatusOnLoad() {
+    try {
+        const res = await fetch('/api/entry-status');
+        const data = await res.json();
+
+        // Check the 4-Weeks Challenge status flag specifically
+        if (!data.challengeEntriesOpen) {
+            const submitBtn = document.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.style.backgroundColor = "#64748b";
+                submitBtn.style.cursor = "not-allowed";
+                submitBtn.innerText = "🔒 Entries are Closed";
             }
         }
+    } catch (err) {
+        console.error("Error checking entry status:", err);
+    }
+}
 
         // Run the lock check immediately on load
         checkStatusOnLoad();
